@@ -4,6 +4,7 @@ import { OtfCognito, CognitoConfig } from './auth/cognito';
 import { MembersApi } from './api/members';
 import { WorkoutsApi } from './api/workouts';
 import { BookingsApi } from './api/bookings';
+import { StudiosApi } from './api/studios';
 import { MemoryCache } from './cache/memory-cache';
 import { LocalStorageCache } from './cache/local-storage-cache';
 import { FileCache } from './cache/file-cache';
@@ -27,8 +28,7 @@ export class Otf {
   public members: MembersApi;
   public workouts: WorkoutsApi;
   public bookings: BookingsApi;
-  // TODO: Add other domain APIs
-  // public studios: StudiosApi;
+  public studios: StudiosApi;
 
   private client: OtfHttpClient;
   private cognito: OtfCognito;
@@ -63,6 +63,7 @@ export class Otf {
     this.members = new MembersApi(this.client, '');
     this.workouts = new WorkoutsApi(this.client, '');
     this.bookings = new BookingsApi(this.client, '');
+    this.studios = new StudiosApi(this.client, '');
   }
 
   async initialize(): Promise<void> {
@@ -73,9 +74,11 @@ export class Otf {
     this.members = new MembersApi(this.client, memberUuid);
     this.workouts = new WorkoutsApi(this.client, memberUuid);
     this.bookings = new BookingsApi(this.client, memberUuid);
+    this.studios = new StudiosApi(this.client, memberUuid);
     
     // Set cross-references for complex operations
     this.workouts.setOtfInstance(this);
+    this.studios.setOtfInstance(this);
   }
 
   get member(): Promise<Member> {
