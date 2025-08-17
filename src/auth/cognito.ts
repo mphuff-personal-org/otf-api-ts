@@ -211,6 +211,19 @@ export class OtfCognito {
     }
   }
 
+  getEmail(): string {
+    if (!this.tokens?.idToken) {
+      throw new Error('Not authenticated - no ID token available');
+    }
+    
+    try {
+      const payload = JSON.parse(atob(this.tokens.idToken.split('.')[1]));
+      return payload['email'];
+    } catch (error) {
+      throw new Error('Failed to extract email from ID token');
+    }
+  }
+
   private async loadFromCache(): Promise<void> {
     const cachedTokens = await this.cache.get('tokens');
     const cachedDevice = await this.cache.get('device');

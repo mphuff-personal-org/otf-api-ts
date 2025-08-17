@@ -2,6 +2,8 @@ import { Member } from 'otf-api-models';
 import { OtfHttpClient } from './client/http-client';
 import { OtfCognito, CognitoConfig } from './auth/cognito';
 import { MembersApi } from './api/members';
+import { WorkoutsApi } from './api/workouts';
+import { BookingsApi } from './api/bookings';
 import { MemoryCache } from './cache/memory-cache';
 import { LocalStorageCache } from './cache/local-storage-cache';
 import { FileCache } from './cache/file-cache';
@@ -23,10 +25,10 @@ export interface OtfUser {
 
 export class Otf {
   public members: MembersApi;
+  public workouts: WorkoutsApi;
+  public bookings: BookingsApi;
   // TODO: Add other domain APIs
-  // public bookings: BookingsApi;
   // public studios: StudiosApi;
-  // public workouts: WorkoutsApi;
 
   private client: OtfHttpClient;
   private cognito: OtfCognito;
@@ -59,6 +61,8 @@ export class Otf {
 
     // Initialize API modules (will be re-initialized after auth)
     this.members = new MembersApi(this.client, '');
+    this.workouts = new WorkoutsApi(this.client, '');
+    this.bookings = new BookingsApi(this.client, '');
   }
 
   async initialize(): Promise<void> {
@@ -67,6 +71,11 @@ export class Otf {
     // Re-initialize API modules with member UUID after authentication
     const memberUuid = this.cognito.getMemberUuid();
     this.members = new MembersApi(this.client, memberUuid);
+    this.workouts = new WorkoutsApi(this.client, memberUuid);
+    this.bookings = new BookingsApi(this.client, memberUuid);
+    
+    // Set cross-references for complex operations
+    this.workouts.setOtfInstance(this);
   }
 
   get member(): Promise<Member> {

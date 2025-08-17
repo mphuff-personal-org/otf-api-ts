@@ -19,6 +19,15 @@ export interface RequestOptions {
   requiresSigV4?: boolean;
 }
 
+export interface WorkoutRequestOptions {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  path: string;
+  params?: Record<string, any>;
+  headers?: Record<string, string>;
+  body?: any;
+  apiType?: 'default' | 'performance' | 'telemetry';
+}
+
 export interface RetryConfig {
   maxRetries: number;
   baseDelay: number;
@@ -29,6 +38,13 @@ export class OtfHttpClient {
   private cognito: OtfCognito;
   private retryConfig: RetryConfig;
   private timeout: number;
+
+  // API Base URLs from Python implementation
+  private static readonly API_BASE_URLS = {
+    default: 'https://api.orangetheory.co',
+    performance: 'https://api.orangetheory.io', 
+    telemetry: 'https://api.yuzu.orangetheory.com',
+  };
 
   constructor(
     cognito: OtfCognito,
@@ -42,6 +58,33 @@ export class OtfHttpClient {
 
   async request<T = any>(options: RequestOptions): Promise<T> {
     return this.retryRequest(options, 0);
+  }
+
+  async workoutRequest<T = any>(options: WorkoutRequestOptions): Promise<T> {
+    const baseUrl = this.getBaseUrlForApiType(options.apiType || 'default');
+    const headers = this.getHeadersForApiType(options.apiType || 'default', options.headers);
+    
+    return this.request<T>({
+      ...options,
+      baseUrl,
+      headers,
+    });
+  }
+
+  getBaseUrlForApiType(apiType: 'default' | 'performance' | 'telemetry'): string {
+    return OtfHttpClient.API_BASE_URLS[apiType];
+  }
+
+  private getHeadersForApiType(apiType: 'default' | 'performance' | 'telemetry', customHeaders?: Record<string, string>): Record<string, string> {
+    const headers = { ...customHeaders };
+    
+    if (apiType === 'performance') {
+      // Add koji headers for performance API (from Python implementation)
+      headers['koji-member-id'] = this.cognito.getMemberUuid();
+      headers['koji-member-email'] = this.cognito.getEmail();
+    }
+    
+    return headers;
   }
 
   private async retryRequest<T>(options: RequestOptions, attempt: number): Promise<T> {
