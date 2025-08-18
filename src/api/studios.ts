@@ -1,6 +1,7 @@
 import { StudioDetail } from 'otf-api-models';
 import { OtfHttpClient } from '../client/http-client';
 
+/** Studio location and contact information */
 export interface StudioLocation {
   phone_number?: string;
   latitude?: number;
@@ -13,6 +14,7 @@ export interface StudioLocation {
   country?: string;
 }
 
+/** Studio service offering with pricing */
 export interface StudioService {
   service_uuid: string;
   name?: string;
@@ -26,15 +28,31 @@ export interface StudioService {
   updated_date?: string;
 }
 
+/**
+ * API for studio information and services
+ * 
+ * Provides access to studio details, favorite studios management,
+ * geographical studio search, and studio service offerings.
+ */
 export class StudiosApi {
   private otfInstance: any; // Will be set after initialization
   
+  /**
+   * @param client - HTTP client for API requests
+   * @param memberUuid - Authenticated member's UUID
+   */
   constructor(private client: OtfHttpClient, private memberUuid: string) {}
   
   setOtfInstance(otf: any): void {
     this.otfInstance = otf;
   }
 
+  /**
+   * Gets detailed information for a specific studio
+   * 
+   * @param studioUuid - Studio UUID (defaults to member's home studio)
+   * @returns Promise resolving to studio details
+   */
   async getStudioDetail(studioUuid?: string): Promise<StudioDetail> {
     // Use home studio UUID if not provided
     const uuid = studioUuid || (this.otfInstance ? await this.otfInstance.homeStudioUuid : '');
@@ -53,6 +71,11 @@ export class StudiosApi {
     }
   }
 
+  /**
+   * Gets the member's favorite studios
+   * 
+   * @returns Promise resolving to array of favorite studio details
+   */
   async getFavoriteStudios(): Promise<StudioDetail[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -67,6 +90,12 @@ export class StudiosApi {
     return Promise.all(studioPromises);
   }
 
+  /**
+   * Adds studio(s) to member's favorites
+   * 
+   * @param studioUuids - Single studio UUID or array of UUIDs to add
+   * @returns Promise resolving to updated favorite studios
+   */
   async addFavoriteStudio(studioUuids: string | string[]): Promise<StudioDetail[]> {
     const uuids = Array.isArray(studioUuids) ? studioUuids : [studioUuids];
     
@@ -91,6 +120,11 @@ export class StudiosApi {
     return response.data.studios.map((studio: any) => this.transformStudioData(studio));
   }
 
+  /**
+   * Removes studio(s) from member's favorites
+   * 
+   * @param studioUuids - Single studio UUID or array of UUIDs to remove
+   */
   async removeFavoriteStudio(studioUuids: string | string[]): Promise<void> {
     const uuids = Array.isArray(studioUuids) ? studioUuids : [studioUuids];
     
@@ -108,6 +142,12 @@ export class StudiosApi {
     });
   }
 
+  /**
+   * Gets services offered by a studio
+   * 
+   * @param studioUuid - Studio UUID (defaults to member's home studio)
+   * @returns Promise resolving to array of studio services with pricing
+   */
   async getStudioServices(studioUuid?: string): Promise<StudioService[]> {
     // Use home studio UUID if not provided  
     const uuid = studioUuid || (this.otfInstance ? await this.otfInstance.homeStudioUuid : '');
@@ -133,6 +173,14 @@ export class StudiosApi {
     }));
   }
 
+  /**
+   * Searches for studios by geographical location
+   * 
+   * @param latitude - Latitude for search center (defaults to home studio location)
+   * @param longitude - Longitude for search center (defaults to home studio location)
+   * @param distance - Search radius in miles (max 250 miles, defaults to 50)
+   * @returns Promise resolving to array of studios within specified distance
+   */
   async searchStudiosByGeo(
     latitude?: number, 
     longitude?: number, 

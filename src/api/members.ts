@@ -2,9 +2,23 @@ import { Member, MemberDetail } from 'otf-api-models';
 import { OtfHttpClient } from '../client/http-client';
 import { API_ENDPOINTS } from '../types/config';
 
+/**
+ * API for member profile and membership operations
+ * 
+ * Provides access to member details, membership information, and profile data.
+ */
 export class MembersApi {
+  /**
+   * @param client - HTTP client for API requests
+   * @param memberUuid - Authenticated member's UUID
+   */
   constructor(private client: OtfHttpClient, private memberUuid: string) {}
 
+  /**
+   * Gets detailed member profile information
+   * 
+   * @returns Promise resolving to member details including home studio and membership info
+   */
   async getMemberDetail(): Promise<MemberDetail> {
     const response = await this.client.request<any>({
       method: 'GET',

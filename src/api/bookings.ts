@@ -1,9 +1,24 @@
 import { BookingV2 } from 'otf-api-models';
 import { OtfHttpClient } from '../client/http-client';
 
+/**
+ * API for class booking and cancellation operations
+ * 
+ * Provides access to booking details and workout class management.
+ */
 export class BookingsApi {
+  /**
+   * @param client - HTTP client for API requests
+   * @param memberUuid - Authenticated member's UUID
+   */
   constructor(private client: OtfHttpClient, private memberUuid: string) {}
 
+  /**
+   * Gets detailed booking information
+   * 
+   * @param bookingId - Unique booking identifier
+   * @returns Promise resolving to booking details with class and studio info
+   */
   async getBookingNew(bookingId: string): Promise<BookingV2> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -15,6 +30,15 @@ export class BookingsApi {
     return this.transformBookingData(response);
   }
 
+  /**
+   * Gets all bookings for the member in a date range
+   * 
+   * @param startDate - Start date for booking range
+   * @param endDate - End date for booking range
+   * @param excludeCancelled - Whether to exclude cancelled bookings
+   * @param removeDuplicates - Whether to remove duplicate bookings
+   * @returns Promise resolving to array of booking objects
+   */
   async getBookingsNew(
     startDate: Date,
     endDate: Date,
@@ -102,6 +126,14 @@ export class BookingsApi {
     } as any;
   }
 
+  /**
+   * Rates a completed class
+   * 
+   * @param classUuid - UUID of the class to rate
+   * @param performanceSummaryId - Performance summary identifier
+   * @param classRating - Class rating (0-3, where 0 is dismiss)
+   * @param coachRating - Coach rating (0-3, where 0 is dismiss)
+   */
   async rateClass(
     classUuid: string,
     performanceSummaryId: string,

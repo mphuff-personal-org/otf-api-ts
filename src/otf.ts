@@ -19,15 +19,41 @@ const COGNITO_CONFIG: CognitoConfig = {
   region: 'us-east-1',
 };
 
+/**
+ * User credentials for OTF authentication
+ */
 export interface OtfUser {
+  /** User's email address for OTF account */
   email: string;
+  /** User's password (optional if using cached tokens) */
   password?: string;
 }
 
+/**
+ * Main OrangeTheory Fitness API client
+ * 
+ * This is the primary entry point for all OTF API operations including member data,
+ * workout statistics, class bookings, and studio information.
+ * 
+ * @example
+ * ```typescript
+ * import { Otf } from 'otf-api-ts';
+ * 
+ * const otf = new Otf({ email: 'user@example.com', password: 'password' });
+ * await otf.initialize();
+ * 
+ * const member = await otf.member;
+ * const workouts = await otf.workouts.getWorkouts();
+ * ```
+ */
 export class Otf {
+  /** API for member profile and membership operations */
   public members: MembersApi;
+  /** API for workout data, stats, and challenge tracking */
   public workouts: WorkoutsApi;
+  /** API for class booking and cancellation operations */
   public bookings: BookingsApi;
+  /** API for studio information and services */
   public studios: StudiosApi;
 
   private client: OtfHttpClient;
@@ -35,6 +61,13 @@ export class Otf {
   private cache: Cache;
   private _member: Member | null = null;
 
+  /**
+   * Creates a new OTF API client instance
+   * 
+   * @param user - User credentials (email required, password optional if using cached tokens)
+   * @param config - Optional configuration overrides
+   * @throws {NoCredentialsError} When email is not provided via user, config, or environment
+   */
   constructor(user?: OtfUser, config: Partial<OtfConfig> = {}) {
     const finalConfig = { ...DEFAULT_CONFIG, ...config };
     
@@ -66,6 +99,13 @@ export class Otf {
     this.studios = new StudiosApi(this.client, '');
   }
 
+  /**
+   * Initializes authentication and sets up API modules
+   * 
+   * Must be called before using any API methods
+   * 
+   * @throws {AuthenticationError} When authentication fails
+   */
   async initialize(): Promise<void> {
     await this.cognito.authenticate();
     
@@ -81,10 +121,20 @@ export class Otf {
     this.studios.setOtfInstance(this);
   }
 
+  /**
+   * Gets the authenticated member's profile data
+   * 
+   * @returns Promise resolving to member profile with home studio and membership details
+   */
   get member(): Promise<Member> {
     return this.getMember();
   }
 
+  /**
+   * Gets the authenticated member's profile data
+   * 
+   * @returns Promise resolving to member profile with home studio and membership details
+   */
   async getMember(): Promise<Member> {
     if (!this._member) {
       this._member = await this.members.getMemberDetail();
@@ -92,19 +142,39 @@ export class Otf {
     return this._member;
   }
 
+  /**
+   * Refreshes the cached member profile data
+   * 
+   * @returns Promise resolving to updated member profile
+   */
   async refreshMember(): Promise<Member> {
     this._member = await this.members.getMemberDetail();
     return this._member;
   }
 
+  /**
+   * Gets the authenticated member's UUID
+   * 
+   * @returns Promise resolving to member UUID string
+   */
   get memberUuid(): Promise<string> {
     return this.getMember().then(member => member.member_uuid);
   }
 
+  /**
+   * Gets the member's home studio information
+   * 
+   * @returns Promise resolving to home studio details
+   */
   get homeStudio(): Promise<any> {
     return this.getMember().then(member => member.home_studio);
   }
 
+  /**
+   * Gets the member's home studio UUID
+   * 
+   * @returns Promise resolving to home studio UUID string
+   */
   get homeStudioUuid(): Promise<string> {
     return this.homeStudio.then(studio => studio.studio_uuid);
   }

@@ -1,20 +1,79 @@
 import { OtfHttpClient } from '../client/http-client';
 import { StatsTime, EquipmentType, ChallengeCategory } from '../types/workout-enums';
+import { Workout, BookingV2, OtfClass, Coach, StudioDetail } from 'otf-api-models';
 
-// Basic interfaces for workout data structures
+/** Complete workout data including performance, telemetry, and class details */
+export interface WorkoutWithTelemetry {
+  /** Performance summary identifier */
+  performance_summary_id: string;
+  /** Class history UUID (same as performance_summary_id) */
+  class_history_uuid: string;
+  /** Booking identifier */
+  booking_id: string;
+  /** Class UUID for ratings */
+  class_uuid?: string;
+  /** Coach first name */
+  coach?: string;
+  /** Whether this workout can be rated */
+  ratable?: boolean;
+  
+  /** Calories burned during workout */
+  calories_burned?: number;
+  /** Splat points earned */
+  splat_points?: number;
+  /** Step count during workout */
+  step_count?: number;
+  /** Active workout time in seconds */
+  active_time_seconds?: number;
+  
+  /** Time spent in each heart rate zone */
+  zone_time_minutes?: ZoneTimeMinutes;
+  /** Heart rate metrics */
+  heart_rate?: HeartRate;
+  
+  /** Rower performance data */
+  rower_data?: any;
+  /** Treadmill performance data */
+  treadmill_data?: any;
+  
+  /** Class information from booking */
+  otf_class: OtfClass;
+  /** Studio information */
+  studio: StudioDetail;
+  /** Telemetry data (heart rate over time) */
+  telemetry?: any;
+  
+  /** Class rating */
+  class_rating?: any;
+  /** Coach rating */
+  coach_rating?: any;
+}
+
+/** Heart rate zone time distribution in minutes */
 export interface ZoneTimeMinutes {
+  /** Time spent in gray zone (resting) */
   gray: number;
+  /** Time spent in blue zone (base pace) */
   blue: number;
+  /** Time spent in green zone (push pace) */
   green: number;
+  /** Time spent in orange zone (all out) */
   orange: number;
+  /** Time spent in red zone (max effort) */
   red: number;
 }
 
+/** Heart rate metrics for a workout */
 export interface HeartRate {
+  /** Maximum heart rate achieved */
   max_hr: number;
+  /** Peak heart rate during workout */
   peak_hr: number;
+  /** Peak heart rate as percentage of max */
   peak_hr_percent: number;
+  /** Average heart rate during workout */
   avg_hr: number;
+  /** Average heart rate as percentage of max */
   avg_hr_percent: number;
 }
 
@@ -72,6 +131,13 @@ export interface LifetimeStats {
   step_count: number;
 }
 
+/**
+ * API for workout data, statistics, and challenge tracking
+ * 
+ * Provides access to workout history, performance summaries, telemetry data,
+ * equipment statistics, and challenge information. Combines data from multiple
+ * OTF API endpoints to provide comprehensive workout insights.
+ */
 export class WorkoutsApi {
   private otfInstance: any; // Will be set after initialization
   
@@ -81,6 +147,11 @@ export class WorkoutsApi {
     this.otfInstance = otf;
   }
 
+  /**
+   * Gets member's body composition scan history
+   * 
+   * @returns Promise resolving to array of body composition data
+   */
   async getBodyCompositionList(): Promise<BodyCompositionData[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -99,6 +170,11 @@ export class WorkoutsApi {
     }));
   }
 
+  /**
+   * Gets member's challenge tracking information
+   * 
+   * @returns Promise resolving to challenge tracker data
+   */
   async getChallengeTracker(): Promise<ChallengeTracker> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -110,6 +186,12 @@ export class WorkoutsApi {
     return response.Dto;
   }
 
+  /**
+   * Gets member's lifetime workout statistics
+   * 
+   * @param selectTime - Time period for statistics (defaults to all time)
+   * @returns Promise resolving to lifetime statistics
+   */
   async getMemberLifetimeStats(selectTime: StatsTime = StatsTime.AllTime): Promise<any> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -120,6 +202,11 @@ export class WorkoutsApi {
     return response.data;
   }
 
+  /**
+   * Gets member's out-of-studio workout history
+   * 
+   * @returns Promise resolving to array of out-of-studio workouts
+   */
   async getOutOfStudioWorkoutHistory(): Promise<any[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -130,6 +217,14 @@ export class WorkoutsApi {
     return response.data;
   }
 
+  /**
+   * Gets member's benchmark performances
+   * 
+   * @param challengeCategoryId - Challenge category filter (0 for all)
+   * @param equipmentId - Equipment type filter (0 for all)
+   * @param challengeSubcategoryId - Challenge subcategory filter (0 for all)
+   * @returns Promise resolving to array of benchmark data
+   */
   async getBenchmarks(
     challengeCategoryId: number = 0,
     equipmentId: EquipmentType | 0 = 0,
@@ -175,6 +270,12 @@ export class WorkoutsApi {
     return response;
   }
 
+  /**
+   * Gets performance summary for a specific workout
+   * 
+   * @param performanceSummaryId - Performance summary identifier
+   * @returns Promise resolving to performance summary with metrics
+   */
   async getPerformanceSummary(performanceSummaryId: string): Promise<any> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -186,7 +287,14 @@ export class WorkoutsApi {
   }
 
   // Telemetry API methods
-  async getTelemetry(performanceSummaryId: string, maxDataPoints: number = 150): Promise<any> {
+  /**
+   * Gets telemetry data for a workout
+   * 
+   * @param performanceSummaryId - Performance summary identifier
+   * @param maxDataPoints - Maximum number of data points to retrieve
+   * @returns Promise resolving to array of telemetry data points
+   */
+  async getTelemetry(performanceSummaryId: string, maxDataPoints: number = 150): Promise<any[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
       apiType: 'telemetry',
@@ -233,17 +341,28 @@ export class WorkoutsApi {
     
     const results = await Promise.all(promises);
     return results.reduce((acc, { id, data }) => {
-      acc[data.classHistoryUuid] = data;
+      acc[id] = data;
       return acc;
     }, {} as Record<string, any>);
   }
 
-  // Complex workout assembly (requires BookingsApi)
+  /**
+   * Gets member's workout history with complete performance data and telemetry
+   * 
+   * This method combines data from multiple endpoints to create comprehensive workout objects
+   * that include performance metrics, telemetry data, class details, and ratings - matching
+   * the data shown in the OTF mobile app.
+   * 
+   * @param startDate - Start date for workout range (defaults to 30 days ago)
+   * @param endDate - End date for workout range (defaults to today)
+   * @param maxDataPoints - Maximum telemetry data points per workout (defaults to 150)
+   * @returns Promise resolving to array of complete workout objects with telemetry
+   */
   async getWorkouts(
     startDate?: Date | string,
     endDate?: Date | string,
     maxDataPoints: number = 150
-  ): Promise<any[]> {
+  ): Promise<WorkoutWithTelemetry[]> {
     // Set default date range (30 days ago to today, like Python)
     const start = startDate 
       ? (typeof startDate === 'string' ? new Date(startDate) : startDate)
@@ -259,12 +378,12 @@ export class WorkoutsApi {
     // Filter out future bookings
     const now = new Date();
     const filteredBookings = bookings.filter(b => 
-      !b.starts_at || new Date(b.starts_at) <= now
+      !b.otf_class?.starts_at || new Date(b.otf_class.starts_at) <= now
     );
 
     // Extract performance summary IDs
     const performanceSummaryIds = filteredBookings
-      .map(b => b.workout?.performance_summary_id)
+      .map(b => (b.workout as any)?.performance_summary_id)
       .filter(Boolean) as string[];
 
     // Get performance summaries and telemetry concurrently
@@ -276,7 +395,7 @@ export class WorkoutsApi {
     // Assemble workout objects combining all data sources
     const workouts = [];
     for (const booking of filteredBookings) {
-      const perfSummaryId = booking.workout?.performance_summary_id;
+      const perfSummaryId = (booking.workout as any)?.performance_summary_id;
       if (!perfSummaryId) continue;
 
       const perfSummary = performanceSummaries[perfSummaryId] || {};
@@ -289,7 +408,14 @@ export class WorkoutsApi {
     return workouts;
   }
 
-  private async getBookingsForWorkouts(startDate: Date, endDate: Date): Promise<any[]> {
+  /**
+   * Gets bookings for workout date range
+   * 
+   * @param startDate - Start date for booking range
+   * @param endDate - End date for booking range
+   * @returns Promise resolving to array of booking objects
+   */
+  private async getBookingsForWorkouts(startDate: Date, endDate: Date): Promise<BookingV2[]> {
     if (!this.otfInstance?.bookings) {
       console.warn('BookingsApi not available - returning empty workouts array');
       return [];
@@ -308,7 +434,15 @@ export class WorkoutsApi {
     }
   }
 
-  private assembleWorkout(booking: any, performanceSummary: any, telemetry: any): any {
+  /**
+   * Assembles complete workout data from booking, performance summary, and telemetry
+   * 
+   * @param booking - Booking data with class and studio info
+   * @param performanceSummary - Performance metrics and equipment data
+   * @param telemetry - Heart rate telemetry over time
+   * @returns Complete workout object matching Python implementation
+   */
+  private assembleWorkout(booking: any, performanceSummary: any, telemetry: any): WorkoutWithTelemetry {
     // Assemble workout data like Python Workout.create() method
     return {
       performance_summary_id: performanceSummary.id || 'unknown',
@@ -352,8 +486,14 @@ export class WorkoutsApi {
     return benchmarks.filter((b: any) => b.challenge_category_id === challengeCategoryId);
   }
 
-  async getWorkoutFromBooking(booking: string | any): Promise<any> {
-    const bookingId = typeof booking === 'string' ? booking : booking.booking_id;
+  /**
+   * Gets a complete workout object from a booking ID or booking object
+   * 
+   * @param booking - Booking ID string or booking object
+   * @returns Promise resolving to complete workout with telemetry data
+   */
+  async getWorkoutFromBooking(booking: string | BookingV2): Promise<WorkoutWithTelemetry> {
+    const bookingId = typeof booking === 'string' ? booking : booking.id;
     
     if (!this.otfInstance?.bookings) {
       throw new Error('BookingsApi not available');
@@ -373,8 +513,16 @@ export class WorkoutsApi {
     return this.assembleWorkout(bookingData, performanceSummary, telemetry);
   }
 
+  /**
+   * Rates a workout's class and coach
+   * 
+   * @param workout - Workout object to rate
+   * @param classRating - Class rating (0-3, where 0 is dismiss)
+   * @param coachRating - Coach rating (0-3, where 0 is dismiss)
+   * @returns Promise resolving to rating confirmation
+   */
   async rateClassFromWorkout(
-    workout: any,
+    workout: WorkoutWithTelemetry,
     classRating: 0 | 1 | 2 | 3,
     coachRating: 0 | 1 | 2 | 3
   ): Promise<any> {
