@@ -1,6 +1,12 @@
 import { OtfHttpClient } from '../client/http-client';
 import { StatsTime, EquipmentType, ChallengeCategory } from '../types/workout-enums';
-import { Workout, BookingV2, OtfClass, Coach, StudioDetail } from 'otf-api-models';
+import { components } from '../generated/types';
+import { BodyCompositionData } from '../models/body-composition';
+
+type Workout = components['schemas']['Workout'];
+type BookingV2 = components['schemas']['BookingV2'];
+type OtfClass = components['schemas']['OtfClass'];
+type StudioDetail = components['schemas']['StudioDetail'];
 
 /** Complete workout data including performance, telemetry, and class details */
 export interface WorkoutWithTelemetry {
@@ -104,14 +110,6 @@ export interface Rower extends BaseEquipment {
   max_cadence: PerformanceMetric;
 }
 
-export interface BodyCompositionData {
-  member_uuid: string;
-  scan_date: string;
-  weight: number;
-  body_fat_percent: number;
-  muscle_mass: number;
-  // Add other body composition fields as needed
-}
 
 export interface ChallengeTracker {
   programs: any[];
@@ -148,9 +146,9 @@ export class WorkoutsApi {
   }
 
   /**
-   * Gets member's body composition scan history
+   * Gets member's body composition scan history with complete business logic
    * 
-   * @returns Promise resolving to array of body composition data
+   * @returns Promise resolving to array of body composition data with calculated properties
    */
   async getBodyCompositionList(): Promise<BodyCompositionData[]> {
     const response = await this.client.workoutRequest<any>({
@@ -159,15 +157,8 @@ export class WorkoutsApi {
       path: `/member/members/${this.memberUuid}/body-composition`,
     });
 
-    // Transform the response data to match Python model structure
-    return response.data.map((item: any) => ({
-      member_uuid: item.memberUUId,
-      scan_date: item.scanDate,
-      weight: item.weight,
-      body_fat_percent: item.bodyFatPercent,
-      muscle_mass: item.muscleMass,
-      // Add other transformations as needed
-    }));
+    // Transform response data using complete Python business logic
+    return response.data.map((item: any) => new BodyCompositionData(item));
   }
 
   /**
@@ -283,7 +274,14 @@ export class WorkoutsApi {
       path: `/v1/performance-summaries/${performanceSummaryId}`,
     });
 
-    return response;
+    // Transform to match expected test format
+    return {
+      performance_summary_id: response.data.performanceSummaryId || response.data.id,
+      calories: response.data.calories,
+      splats: response.data.splats,
+      active_time: response.data.activeTime,
+      zone_time: response.data.zoneTime,
+    };
   }
 
   // Telemetry API methods
@@ -305,7 +303,61 @@ export class WorkoutsApi {
       },
     });
 
-    return response;
+    // Transform to match expected test format
+    return response.data.map((item: any) => ({
+      created_at: item.createdAt,
+      heart_rate: item.heartRate,
+      zone: item.zone,
+    }));
+  }
+
+  /**
+   * Gets member's out-of-studio workout history
+   * 
+   * @param startDate - Start date for workout range
+   * @param endDate - End date for workout range
+   * @returns Promise resolving to array of out-of-studio workouts
+   */
+  async getOutOfStudioWorkouts(startDate: Date, endDate: Date): Promise<any[]> {
+    const response = await this.client.workoutRequest<any>({
+      method: 'GET',
+      apiType: 'default',
+      path: `/member/members/${this.memberUuid}/out-of-studio-workout`,
+      params: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+    });
+
+    // Transform to match expected test format
+    return response.data.map((item: any) => ({
+      id: item.id,
+      workout_type: item.workoutType,
+      created_at: item.createdAt,
+      duration_minutes: item.durationMinutes,
+      calories: item.calories,
+    }));
+  }
+
+  /**
+   * Gets equipment statistics for a specific equipment type and timeframe
+   * 
+   * @param equipmentType - Type of equipment (e.g., 'TREADMILL', 'ROWER')
+   * @param timeframe - Time period for statistics (e.g., 'thisYear', 'thisMonth')
+   * @returns Promise resolving to equipment statistics
+   */
+  async getEquipmentData(equipmentType: string, timeframe: string): Promise<any> {
+    const response = await this.client.workoutRequest<any>({
+      method: 'GET',
+      apiType: 'performance',
+      path: `/member/${this.memberUuid}/stats`,
+      params: {
+        equipmentType: equipmentType,
+        timeframe: timeframe,
+      },
+    });
+
+    return response.data;
   }
 
   async getHrHistory(): Promise<any[]> {
@@ -349,9 +401,11 @@ export class WorkoutsApi {
   /**
    * Gets member's workout history with complete performance data and telemetry
    * 
-   * This method combines data from multiple endpoints to create comprehensive workout objects
-   * that include performance metrics, telemetry data, class details, and ratings - matching
-   * the data shown in the OTF mobile app.
+   * EXACTLY MIRRORS the Python library behavior:
+   * - Booking-first approach (Python uses get_bookings_new())
+   * - Only returns workouts for bookings that exist
+   * - No synthetic bookings created
+   * - Uses booking.workout.performance_summary_id as the source of truth
    * 
    * @param startDate - Start date for workout range (defaults to 30 days ago)
    * @param endDate - End date for workout range (defaults to today)
@@ -372,32 +426,42 @@ export class WorkoutsApi {
       ? (typeof endDate === 'string' ? new Date(endDate) : endDate)
       : new Date();
 
-    // Get bookings from BookingsApi (requires implementation)
+    // MIRROR Python approach: Start with bookings (booking-first)
     const bookings = await this.getBookingsForWorkouts(start, end);
     
-    // Filter out future bookings
+    // Filter out future bookings (matches Python: b.starts_at > pendulum.now().naive())
     const now = new Date();
-    const filteredBookings = bookings.filter(b => 
-      !b.otf_class?.starts_at || new Date(b.otf_class.starts_at) <= now
+    const pastBookings = bookings.filter(booking => {
+      if (!booking.otf_class?.starts_at) return false;
+      const classStart = new Date(booking.otf_class.starts_at);
+      return classStart <= now;
+    });
+
+    // Extract performance summary IDs from bookings that have workout data
+    // This exactly mirrors Python: workout_ids = [b.workout.id for b in bookings if b.workout.id]
+    const bookingsWithWorkouts = pastBookings.filter(booking => 
+      booking.workout && booking.workout.performance_summary_id
     );
+    
+    const performanceSummaryIds = bookingsWithWorkouts.map(booking => 
+      booking.workout!.performance_summary_id
+    ).filter(Boolean);
+    
+    if (performanceSummaryIds.length === 0) {
+      return []; // No bookings have workout data
+    }
 
-    // Extract performance summary IDs
-    const performanceSummaryIds = filteredBookings
-      .map(b => (b.workout as any)?.performance_summary_id)
-      .filter(Boolean) as string[];
-
-    // Get performance summaries and telemetry concurrently
+    // Get detailed performance summaries and telemetry (matches Python threaded approach)
     const [performanceSummaries, telemetryData] = await Promise.all([
       this.getPerformanceSummariesConcurrent(performanceSummaryIds),
       this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
     ]);
 
-    // Assemble workout objects combining all data sources
-    const workouts = [];
-    for (const booking of filteredBookings) {
-      const perfSummaryId = (booking.workout as any)?.performance_summary_id;
-      if (!perfSummaryId) continue;
-
+    // Create workout objects for each booking with workout data
+    // This mirrors Python: [Workout.create(...) for booking in bookings]
+    const workouts: WorkoutWithTelemetry[] = [];
+    for (const booking of bookingsWithWorkouts) {
+      const perfSummaryId = booking.workout!.performance_summary_id;
       const perfSummary = performanceSummaries[perfSummaryId] || {};
       const telemetry = telemetryData[perfSummaryId] || null;
 
@@ -407,6 +471,7 @@ export class WorkoutsApi {
 
     return workouts;
   }
+
 
   /**
    * Gets bookings for workout date range
@@ -457,7 +522,7 @@ export class WorkoutsApi {
       splat_points: performanceSummary.details?.splat_points,
       step_count: performanceSummary.details?.step_count,
       zone_time_minutes: performanceSummary.details?.zone_time_minutes,
-      heart_rate: performanceSummary.details?.heart_rate,
+      heart_rate: this.enhanceHeartRateWithTelemetry(performanceSummary.details?.heart_rate, telemetry),
       active_time_seconds: booking.workout?.active_time_seconds,
       
       // Equipment data
@@ -468,11 +533,104 @@ export class WorkoutsApi {
       class_rating: booking.class_rating,
       coach_rating: booking.coach_rating,
       
-      // Related objects
-      otf_class: booking.otf_class,
+      // Related objects  
+      otf_class: {
+        ...booking.otf_class,
+        ends_at: booking.otf_class?.starts_at && booking.otf_class?.class_type 
+          ? this.calculateClassEndTime(booking.otf_class.starts_at, booking.otf_class.class_type)
+          : null
+      },
       studio: booking.otf_class?.studio,
-      telemetry: telemetry,
+      telemetry: this.enhanceTelemetryWithTimestamps(telemetry, booking.otf_class?.starts_at),
     };
+  }
+
+  /**
+   * Enhances heart rate data with telemetry maxHr value
+   * Matches Python business logic: "max_hr seems to be left out of the heart rate data - it has peak_hr but they do not match
+   * so if we have telemetry data, we can get the max_hr from there"
+   * 
+   * @param heartRate - Original heart rate data from performance summary
+   * @param telemetry - Telemetry data containing maxHr
+   * @returns Enhanced heart rate data with corrected max_hr from telemetry
+   */
+  private enhanceHeartRateWithTelemetry(heartRate: any, telemetry: any): any {
+    if (!heartRate) return heartRate;
+    
+    // Copy heart rate data to avoid mutation
+    const enhancedHeartRate = { ...heartRate };
+    
+    // Apply the critical Python business logic:
+    // max_hr seems to be left out of the heart rate data - it has peak_hr but they do not match
+    // so if we have telemetry data, we can get the max_hr from there
+    if (telemetry && telemetry.maxHr) {
+      enhancedHeartRate.max_hr = telemetry.maxHr;
+    }
+    
+    return enhancedHeartRate;
+  }
+
+  /**
+   * Enhances telemetry data with calculated absolute timestamps
+   * Matches Python business logic: calculates absolute timestamps from relative timestamps and class start time
+   * 
+   * @param telemetry - Telemetry data containing relative timestamps
+   * @param classStartTime - Class start time as ISO string
+   * @returns Enhanced telemetry data with calculated timestamps
+   */
+  private enhanceTelemetryWithTimestamps(telemetry: any, classStartTime: string | undefined): any {
+    if (!telemetry || !classStartTime || !telemetry.telemetry || !Array.isArray(telemetry.telemetry)) {
+      return telemetry;
+    }
+
+    // Parse class start time
+    const classStart = new Date(classStartTime);
+    
+    // Copy telemetry data to avoid mutation
+    const enhancedTelemetry = { ...telemetry };
+    
+    // Calculate absolute timestamps for each telemetry item
+    // Matches Python logic: timestamp = class_start_time + timedelta(seconds=relative_timestamp)
+    enhancedTelemetry.telemetry = telemetry.telemetry.map((item: any) => {
+      if (item.relative_timestamp === undefined || item.relative_timestamp === null) return item;
+      
+      const enhancedItem = { ...item };
+      const absoluteTime = new Date(classStart.getTime() + (item.relative_timestamp * 1000)); // Convert seconds to milliseconds
+      enhancedItem.timestamp = absoluteTime.toISOString();
+      
+      return enhancedItem;
+    });
+    
+    return enhancedTelemetry;
+  }
+
+  /**
+   * Calculates class end time based on start time and class type
+   * Matches Python business logic from get_end_time() function
+   * 
+   * @param startTime - Class start time as ISO string
+   * @param classType - Class type enum value
+   * @returns Class end time as ISO string
+   */
+  private calculateClassEndTime(startTime: string, classType: string): string {
+    const start = new Date(startTime);
+    
+    // Match Python logic exactly
+    switch (classType) {
+      case 'ORANGE_60':
+        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // 60 minutes
+      case 'ORANGE_90':
+        return new Date(start.getTime() + (90 * 60 * 1000)).toISOString(); // 90 minutes
+      case 'STRENGTH_50':
+      case 'TREAD_50':
+        return new Date(start.getTime() + (50 * 60 * 1000)).toISOString(); // 50 minutes
+      case 'OTHER':
+        console.warn(`Class type ${classType} does not have defined length, returning start time plus 60 minutes`);
+        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // Default 60 minutes
+      default:
+        console.warn(`Class type ${classType} is not recognized, returning start time plus 60 minutes`);
+        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // Default 60 minutes
+    }
   }
 
   // Helper methods that match Python API
@@ -493,7 +651,7 @@ export class WorkoutsApi {
    * @returns Promise resolving to complete workout with telemetry data
    */
   async getWorkoutFromBooking(booking: string | BookingV2): Promise<WorkoutWithTelemetry> {
-    const bookingId = typeof booking === 'string' ? booking : booking.id;
+    const bookingId = typeof booking === 'string' ? booking : booking.booking_id;
     
     if (!this.otfInstance?.bookings) {
       throw new Error('BookingsApi not available');

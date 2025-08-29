@@ -6,3 +6,4 @@ dist/
 .otf-cache/
 docs/
 .DS_Store
+schema/

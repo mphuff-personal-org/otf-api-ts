@@ -13,5 +13,5 @@ export { StudiosApi } from './api/studios';
 export type { StudioLocation, StudioService } from './api/studios';
 export type { ZoneTimeMinutes, HeartRate, WorkoutWithTelemetry } from './api/workouts';
 
-// Re-export types from models package
-export type * from 'otf-api-models';
+// Re-export types from local models
+export type * from './models';
