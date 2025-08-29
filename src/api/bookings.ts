@@ -1,7 +1,11 @@
 import { components } from '../generated/types';
 
-type BookingV2 = components['schemas']['BookingV2'];
+type BookingV2Base = components['schemas']['BookingV2'];
 type BookingStatus = components['schemas']['BookingStatus'];
+
+interface BookingV2 extends BookingV2Base {
+  status: BookingStatus;
+}
 import { OtfHttpClient } from '../client/http-client';
 
 /**

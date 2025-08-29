@@ -7,3 +7,7 @@ dist/
 docs/
 .DS_Store
 schema/
+
+# Do not write out integration test results to git
+integration_test/**.json
+integration_test/*/**.json

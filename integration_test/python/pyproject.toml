@@ -1,0 +1,11 @@
+[project]
+name = "otf-api-integration-test"
+version = "0.1.0"
+description = "Integration tests for OTF API cross-language validation"
+requires-python = ">=3.11"
+dependencies = [
+    "otf-api==0.15.4",
+]
+
+[tool.uv]
+dev-dependencies = []

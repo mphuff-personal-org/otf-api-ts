@@ -268,20 +268,39 @@ export class WorkoutsApi {
    * @returns Promise resolving to performance summary with metrics
    */
   async getPerformanceSummary(performanceSummaryId: string): Promise<any> {
-    const response = await this.client.workoutRequest<any>({
-      method: 'GET',
-      apiType: 'performance',
-      path: `/v1/performance-summaries/${performanceSummaryId}`,
-    });
+    try {
+      const response = await this.client.workoutRequest<any>({
+        method: 'GET',
+        apiType: 'performance',
+        path: `/v1/performance-summaries/${performanceSummaryId}`,
+      });
 
-    // Transform to match expected test format
-    return {
-      performance_summary_id: response.data.performanceSummaryId || response.data.id,
-      calories: response.data.calories,
-      splats: response.data.splats,
-      active_time: response.data.activeTime,
-      zone_time: response.data.zoneTime,
-    };
+      if (!response) {
+        console.warn(`getPerformanceSummary: No response for ${performanceSummaryId}`);
+        return null;
+      }
+
+      // The actual performance data is in response.details with snake_case field names
+      const details = response.details || {};
+      
+      // Return the full performance summary data matching Python structure
+      return {
+        performance_summary_id: response.id || performanceSummaryId,
+        calories_burned: details.calories_burned || 0,
+        splat_points: details.splat_points || 0,
+        step_count: details.step_count || 0,
+        active_time_seconds: details.active_time_seconds || 0,
+        zone_time_minutes: details.zone_time_minutes || {},
+        heart_rate: details.heart_rate || {},
+        equipment_data: details.equipment_data || {},
+        // Include class info
+        class: response.class || {},
+        ratable: response.ratable || false
+      };
+    } catch (error) {
+      console.warn(`getPerformanceSummary failed for ${performanceSummaryId}:`, error instanceof Error ? error.message : String(error));
+      return null;
+    }
   }
 
   // Telemetry API methods
@@ -376,19 +395,28 @@ export class WorkoutsApi {
   // Helper methods for concurrent requests (simplified for now)
   async getPerformanceSummariesConcurrent(performanceSummaryIds: string[]): Promise<Record<string, any>> {
     const promises = performanceSummaryIds.map(id => 
-      this.getPerformanceSummary(id).then(data => ({ id, data }))
+      this.getPerformanceSummary(id).then(data => ({ id, data })).catch(error => {
+        console.warn(`Failed to get performance summary ${id}:`, error instanceof Error ? error.message : String(error));
+        return { id, data: null };
+      })
     );
     
     const results = await Promise.all(promises);
+    
     return results.reduce((acc, { id, data }) => {
-      acc[id] = data;
+      if (data !== null) {
+        acc[id] = data;
+      }
       return acc;
     }, {} as Record<string, any>);
   }
 
   async getTelemetryConcurrent(performanceSummaryIds: string[], maxDataPoints: number = 150): Promise<Record<string, any>> {
     const promises = performanceSummaryIds.map(id => 
-      this.getTelemetry(id, maxDataPoints).then(data => ({ id, data }))
+      this.getTelemetry(id, maxDataPoints).then(data => ({ id, data })).catch(error => {
+        console.warn(`Failed to get telemetry ${id}:`, error instanceof Error ? error.message : String(error));
+        return { id, data: null };
+      })
     );
     
     const results = await Promise.all(promises);
@@ -417,59 +445,67 @@ export class WorkoutsApi {
     endDate?: Date | string,
     maxDataPoints: number = 150
   ): Promise<WorkoutWithTelemetry[]> {
-    // Set default date range (30 days ago to today, like Python)
-    const start = startDate 
-      ? (typeof startDate === 'string' ? new Date(startDate) : startDate)
-      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    
-    const end = endDate
-      ? (typeof endDate === 'string' ? new Date(endDate) : endDate)
-      : new Date();
+    try {
+      // Set default date range (30 days ago to today, like Python)
+      const start = startDate 
+        ? (typeof startDate === 'string' ? new Date(startDate) : startDate)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      
+      const end = endDate
+        ? (typeof endDate === 'string' ? new Date(endDate) : endDate)
+        : new Date();
 
-    // MIRROR Python approach: Start with bookings (booking-first)
-    const bookings = await this.getBookingsForWorkouts(start, end);
-    
-    // Filter out future bookings (matches Python: b.starts_at > pendulum.now().naive())
-    const now = new Date();
-    const pastBookings = bookings.filter(booking => {
-      if (!booking.otf_class?.starts_at) return false;
-      const classStart = new Date(booking.otf_class.starts_at);
-      return classStart <= now;
-    });
+      // MIRROR Python approach: Start with bookings (booking-first)
+      const bookings = await this.getBookingsForWorkouts(start, end);
+      
+      // Filter out future bookings (matches Python: b.starts_at > pendulum.now().naive())
+      const now = new Date();
+      const pastBookings = bookings.filter(booking => {
+        if (!booking.otf_class?.starts_at) return false;
+        const classStart = new Date(booking.otf_class.starts_at);
+        return classStart <= now;
+      });
 
-    // Extract performance summary IDs from bookings that have workout data
-    // This exactly mirrors Python: workout_ids = [b.workout.id for b in bookings if b.workout.id]
-    const bookingsWithWorkouts = pastBookings.filter(booking => 
-      booking.workout && booking.workout.performance_summary_id
-    );
-    
-    const performanceSummaryIds = bookingsWithWorkouts.map(booking => 
-      booking.workout!.performance_summary_id
-    ).filter(Boolean);
-    
-    if (performanceSummaryIds.length === 0) {
-      return []; // No bookings have workout data
+      // Extract performance summary IDs from bookings that have workout data
+      // This exactly mirrors Python: workout_ids = [b.workout.id for b in bookings if b.workout.id]
+      const bookingsWithWorkouts = pastBookings.filter(booking => 
+        booking.workout && booking.workout.performance_summary_id
+      );
+      
+      const performanceSummaryIds = bookingsWithWorkouts.map(booking => 
+        booking.workout!.performance_summary_id
+      ).filter(Boolean);
+      
+      if (performanceSummaryIds.length === 0) {
+        return []; // No bookings have workout data
+      }
+
+      // Get detailed performance summaries and telemetry (matches Python threaded approach)
+      const [performanceSummaries, telemetryData] = await Promise.all([
+        this.getPerformanceSummariesConcurrent(performanceSummaryIds),
+        this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
+      ]);
+
+      // Create workout objects for each booking with workout data
+      // This mirrors Python: [Workout.create(...) for booking in bookings]
+      const workouts: WorkoutWithTelemetry[] = [];
+      for (const booking of bookingsWithWorkouts) {
+        const perfSummaryId = booking.workout!.performance_summary_id;
+        const perfSummary = performanceSummaries[perfSummaryId] || {};
+        const telemetry = telemetryData[perfSummaryId] || null;
+
+        const workout = this.assembleWorkout(booking, perfSummary, telemetry);
+        workouts.push(workout);
+      }
+
+      return workouts;
+    } catch (error) {
+      console.error('getWorkouts error:', error);
+      if (error instanceof Error) {
+        console.error('Stack trace:', error.stack);
+      }
+      throw error;
     }
-
-    // Get detailed performance summaries and telemetry (matches Python threaded approach)
-    const [performanceSummaries, telemetryData] = await Promise.all([
-      this.getPerformanceSummariesConcurrent(performanceSummaryIds),
-      this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
-    ]);
-
-    // Create workout objects for each booking with workout data
-    // This mirrors Python: [Workout.create(...) for booking in bookings]
-    const workouts: WorkoutWithTelemetry[] = [];
-    for (const booking of bookingsWithWorkouts) {
-      const perfSummaryId = booking.workout!.performance_summary_id;
-      const perfSummary = performanceSummaries[perfSummaryId] || {};
-      const telemetry = telemetryData[perfSummaryId] || null;
-
-      const workout = this.assembleWorkout(booking, perfSummary, telemetry);
-      workouts.push(workout);
-    }
-
-    return workouts;
   }
 
 
@@ -510,24 +546,24 @@ export class WorkoutsApi {
   private assembleWorkout(booking: any, performanceSummary: any, telemetry: any): WorkoutWithTelemetry {
     // Assemble workout data like Python Workout.create() method
     return {
-      performance_summary_id: performanceSummary.id || 'unknown',
-      class_history_uuid: performanceSummary.id || 'unknown',
+      performance_summary_id: performanceSummary.performance_summary_id || booking.workout?.performance_summary_id || 'unknown',
+      class_history_uuid: performanceSummary.performance_summary_id || booking.workout?.performance_summary_id || 'unknown',
       booking_id: booking.booking_id,
       class_uuid: booking.otf_class?.class_uuid || null,
-      coach: booking.otf_class?.coach?.first_name || null,
-      ratable: booking.ratable,
+      coach: booking.otf_class?.coach?.first_name || booking.otf_class?.coach || null,
+      ratable: booking.ratable || performanceSummary.ratable || false,
       
-      // Performance metrics from performance summary
-      calories_burned: performanceSummary.details?.calories_burned,
-      splat_points: performanceSummary.details?.splat_points,
-      step_count: performanceSummary.details?.step_count,
-      zone_time_minutes: performanceSummary.details?.zone_time_minutes,
-      heart_rate: this.enhanceHeartRateWithTelemetry(performanceSummary.details?.heart_rate, telemetry),
-      active_time_seconds: booking.workout?.active_time_seconds,
+      // Performance metrics from performance summary (now at top level after our fix)
+      calories_burned: performanceSummary.calories_burned,
+      splat_points: performanceSummary.splat_points,
+      step_count: performanceSummary.step_count,
+      zone_time_minutes: performanceSummary.zone_time_minutes,
+      heart_rate: this.enhanceHeartRateWithTelemetry(performanceSummary.heart_rate, telemetry),
+      active_time_seconds: performanceSummary.active_time_seconds || booking.workout?.active_time_seconds,
       
-      // Equipment data
-      rower_data: performanceSummary.details?.equipment_data?.rower,
-      treadmill_data: performanceSummary.details?.equipment_data?.treadmill,
+      // Equipment data (now at top level after our fix)
+      rower_data: performanceSummary.equipment_data?.rower,
+      treadmill_data: performanceSummary.equipment_data?.treadmill,
       
       // Ratings
       class_rating: booking.class_rating,
@@ -579,19 +615,25 @@ export class WorkoutsApi {
    * @returns Enhanced telemetry data with calculated timestamps
    */
   private enhanceTelemetryWithTimestamps(telemetry: any, classStartTime: string | undefined): any {
-    if (!telemetry || !classStartTime || !telemetry.telemetry || !Array.isArray(telemetry.telemetry)) {
+    if (!telemetry || !classStartTime) {
+      return telemetry;
+    }
+
+    // Handle both array and object with telemetry property
+    const telemetryArray = Array.isArray(telemetry) ? telemetry : 
+                          (telemetry.telemetry && Array.isArray(telemetry.telemetry)) ? telemetry.telemetry :
+                          null;
+    
+    if (!telemetryArray) {
       return telemetry;
     }
 
     // Parse class start time
     const classStart = new Date(classStartTime);
     
-    // Copy telemetry data to avoid mutation
-    const enhancedTelemetry = { ...telemetry };
-    
     // Calculate absolute timestamps for each telemetry item
     // Matches Python logic: timestamp = class_start_time + timedelta(seconds=relative_timestamp)
-    enhancedTelemetry.telemetry = telemetry.telemetry.map((item: any) => {
+    const enhancedTelemetryArray = telemetryArray.map((item: any) => {
       if (item.relative_timestamp === undefined || item.relative_timestamp === null) return item;
       
       const enhancedItem = { ...item };
@@ -601,7 +643,8 @@ export class WorkoutsApi {
       return enhancedItem;
     });
     
-    return enhancedTelemetry;
+    // Return in the same format we received
+    return Array.isArray(telemetry) ? enhancedTelemetryArray : { ...telemetry, telemetry: enhancedTelemetryArray };
   }
 
   /**

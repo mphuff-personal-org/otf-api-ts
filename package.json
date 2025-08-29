@@ -19,11 +19,13 @@
     "docs": "typedoc",
     "docs:serve": "typedoc --watch",
     "validate-schema": "npm run download-schema && swagger-parser validate schema/openapi.yaml",
-    "integration-test": "./scripts/run-integration-tests.sh",
-    "integration-test:cross-language": "./scripts/run-integration-tests.sh",
-    "integration-test:python": "python3 scripts/integration-test-python.py",
-    "integration-test:typescript": "npx ts-node scripts/integration-test-typescript.ts",
-    "integration-test:validate": "npx ts-node scripts/integration-test-validator.ts"
+    "integration-test": "./integration_test/run-integration-tests.sh",
+    "integration-test:cross-language": "./integration_test/run-integration-tests.sh",
+    "integration-test:python": "cd integration_test/python && uv sync && uv run integration_test.py",
+    "integration-test:typescript": "cd integration_test/typescript && npx --yes ts-node integration-test-typescript.ts",
+    "integration-test:validate": "cd integration_test/typescript && npx --yes ts-node integration-test-validator.ts",
+    "python-version": "node scripts/update-python-version.js",
+    "python-version:set": "node scripts/update-python-version.js"
   },
   "keywords": [
     "orangetheory",
@@ -51,6 +53,7 @@
     "js-yaml": "^4.1.0",
     "openapi-typescript": "^7.0.0",
     "swagger-parser": "^10.0.0",
+    "ts-node": "^10.9.2",
     "typedoc": "^0.28.10",
     "typedoc-plugin-markdown": "^4.8.1",
     "typescript": "^5.0.0",
