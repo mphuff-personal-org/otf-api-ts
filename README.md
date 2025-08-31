@@ -3,6 +3,7 @@
 [![npm version](https://badge.fury.io/js/otf-api-ts.svg)](https://badge.fury.io/js/otf-api-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js 18+](https://img.shields.io/badge/node-18.0+-green.svg)](https://nodejs.org/)
+[![Code Coverage](https://codecov.io/gh/your-username/otf-api-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/your-username/otf-api-ts)
 
 A TypeScript/JavaScript API client for OrangeTheory Fitness APIs. This library provides type-safe access to OTF APIs for retrieving workouts, performance data, class schedules, studio information, and bookings.
 
@@ -455,6 +456,32 @@ nearbyStudios.forEach(studio => {
   console.log(`${studio.name} - ${studio.distance} miles`);
 });
 ```
+
+## Code Coverage
+
+This project maintains comprehensive test coverage to ensure reliability and code quality.
+
+### Coverage Reports
+- **Current Coverage**: [![Code Coverage](https://codecov.io/gh/your-username/otf-api-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/your-username/otf-api-ts)
+- **Detailed Reports**: [Codecov Dashboard](https://codecov.io/gh/your-username/otf-api-ts)
+- **Coverage Threshold**: 80% minimum coverage required
+
+### Running Coverage Locally
+```bash
+# Run tests with coverage
+npm run test:coverage
+
+# View coverage report
+open coverage/lcov-report/index.html
+```
+
+### Coverage Areas
+- ✅ API client methods
+- ✅ Authentication flows
+- ✅ Data transformation logic
+- ✅ Error handling
+- ✅ Cache implementations
+- ✅ Utility functions
 
 ## Contributing
 
