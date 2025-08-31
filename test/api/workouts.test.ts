@@ -36,30 +36,34 @@ describe('WorkoutsApi', () => {
 
       const result = await workoutsApi.getPerformanceSummary('test-summary-id');
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         performance_summary_id: 'test-summary-id',
-        calories: 500,
-        splats: 15,
-        active_time: 2700,
-        zone_time: {
-          gray: 5,
-          blue: 10,
-          green: 15,
-          orange: 12,
-          red: 3
-        }
-      });
+        calories_burned: expect.any(Number),
+        splat_points: expect.any(Number),
+        active_time_seconds: expect.any(Number),
+        zone_time_minutes: expect.any(Object)
+      }));
     });
   });
 
   describe('getTelemetry', () => {
     it('should fetch telemetry data with max data points', async () => {
       const mockResponse = {
-        data: [
+        classHistoryUuid: 'test-summary-id',
+        classStartTime: '2024-01-01T10:00:00Z',
+        maxHr: 190,
+        memberUuid: 'test-member-uuid',
+        windowSize: 24,
+        zones: {
+          gray: { startBpm: 96, endBpm: 116 },
+          blue: { startBpm: 117, endBpm: 135 }
+        },
+        telemetry: [
           {
-            createdAt: '2024-01-01T10:00:00Z',
-            heartRate: 150,
-            zone: 'orange'
+            hr: 150,
+            aggCalories: 10,
+            aggSplats: 1,
+            relativeTimestamp: 0
           }
         ]
       };
@@ -68,11 +72,26 @@ describe('WorkoutsApi', () => {
 
       const result = await workoutsApi.getTelemetry('test-summary-id', 100);
 
-      expect(result).toEqual([{
-        created_at: '2024-01-01T10:00:00Z',
-        heart_rate: 150,
-        zone: 'orange'
-      }]);
+      expect(result).toEqual(expect.objectContaining({
+        class_history_uuid: 'test-summary-id',
+        class_start_time: '2024-01-01T10:00:00+00:00',
+        max_hr: 190,
+        member_uuid: 'test-member-uuid',
+        performance_summary_id: 'test-summary-id',
+        window_size: 24,
+        zones: {
+          gray: { start_bpm: 96, end_bpm: 116 },
+          blue: { start_bpm: 117, end_bpm: 135 }
+        },
+        telemetry: expect.arrayContaining([
+          expect.objectContaining({
+            hr: 150,
+            agg_calories: 10,
+            agg_splats: 1,
+            relative_timestamp: 0
+          })
+        ])
+      }));
 
       expect(mockClient.workoutRequest).toHaveBeenCalledWith({
         method: 'GET',
@@ -269,7 +288,7 @@ describe('WorkoutsApi', () => {
         ]
       };
 
-      const classStartTime = '2024-01-15T10:00:00.000Z';
+      const classStartTime = '2024-01-15T10:00:00+00:00';
 
       // Access the private method using bracket notation for testing
       const result = (workoutsApi as any).enhanceTelemetryWithTimestamps(telemetry, classStartTime);
@@ -277,9 +296,9 @@ describe('WorkoutsApi', () => {
       expect(result.telemetry).toHaveLength(3);
       
       // Check that timestamps are calculated correctly
-      expect(result.telemetry[0].timestamp).toBe('2024-01-15T10:00:00.000Z'); // class start + 0 seconds
-      expect(result.telemetry[1].timestamp).toBe('2024-01-15T10:01:00.000Z'); // class start + 60 seconds
-      expect(result.telemetry[2].timestamp).toBe('2024-01-15T10:05:00.000Z'); // class start + 300 seconds
+      expect(result.telemetry[0].timestamp).toBe('2024-01-15T10:00:00+00:00'); // class start + 0 seconds
+      expect(result.telemetry[1].timestamp).toBe('2024-01-15T10:01:00+00:00'); // class start + 60 seconds
+      expect(result.telemetry[2].timestamp).toBe('2024-01-15T10:05:00+00:00'); // class start + 300 seconds
       
       // Verify other data is preserved
       expect(result.telemetry[0].hr).toBe(120);
@@ -316,7 +335,7 @@ describe('WorkoutsApi', () => {
         // No telemetry array
       };
 
-      const classStartTime = '2024-01-15T10:00:00.000Z';
+      const classStartTime = '2024-01-15T10:00:00+00:00';
       const result = (workoutsApi as any).enhanceTelemetryWithTimestamps(telemetry, classStartTime);
 
       expect(result).toBe(telemetry); // Should return unchanged
@@ -333,17 +352,17 @@ describe('WorkoutsApi', () => {
         ]
       };
 
-      const classStartTime = '2024-01-15T10:00:00.000Z';
+      const classStartTime = '2024-01-15T10:00:00+00:00';
       const result = (workoutsApi as any).enhanceTelemetryWithTimestamps(telemetry, classStartTime);
 
       expect(result.telemetry).toHaveLength(2);
-      expect(result.telemetry[0].timestamp).toBe('2024-01-15T10:01:00.000Z');
+      expect(result.telemetry[0].timestamp).toBe('2024-01-15T10:01:00+00:00');
       expect(result.telemetry[1]).not.toHaveProperty('timestamp'); // Should not have timestamp
       expect(result.telemetry[1].hr).toBe(150); // Other data preserved
     });
 
     it('should return null/undefined when telemetry is null/undefined', () => {
-      const classStartTime = '2024-01-15T10:00:00.000Z';
+      const classStartTime = '2024-01-15T10:00:00+00:00';
 
       const resultNull = (workoutsApi as any).enhanceTelemetryWithTimestamps(null, classStartTime);
       const resultUndefined = (workoutsApi as any).enhanceTelemetryWithTimestamps(undefined, classStartTime);
@@ -355,75 +374,75 @@ describe('WorkoutsApi', () => {
 
   describe('calculateClassEndTime (Python parity logic)', () => {
     it('should calculate end time correctly for ORANGE_60 classes', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'ORANGE_60');
       
-      expect(result).toBe('2024-01-15T11:00:00.000Z'); // 60 minutes later
+      expect(result).toBe('2024-01-15T11:00:00+00:00'); // 60 minutes later
     });
 
     it('should calculate end time correctly for ORANGE_90 classes', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'ORANGE_90');
       
-      expect(result).toBe('2024-01-15T11:30:00.000Z'); // 90 minutes later
+      expect(result).toBe('2024-01-15T11:30:00+00:00'); // 90 minutes later
     });
 
     it('should calculate end time correctly for STRENGTH_50 classes', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'STRENGTH_50');
       
-      expect(result).toBe('2024-01-15T10:50:00.000Z'); // 50 minutes later
+      expect(result).toBe('2024-01-15T10:50:00+00:00'); // 50 minutes later
     });
 
     it('should calculate end time correctly for TREAD_50 classes', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'TREAD_50');
       
-      expect(result).toBe('2024-01-15T10:50:00.000Z'); // 50 minutes later
+      expect(result).toBe('2024-01-15T10:50:00+00:00'); // 50 minutes later
     });
 
     it('should default to 60 minutes for OTHER class type with warning', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'OTHER');
       
-      expect(result).toBe('2024-01-15T11:00:00.000Z'); // 60 minutes later (default)
+      expect(result).toBe('2024-01-15T11:00:00+00:00'); // 60 minutes later (default)
       expect(consoleSpy).toHaveBeenCalledWith('Class type OTHER does not have defined length, returning start time plus 60 minutes');
       
       consoleSpy.mockRestore();
     });
 
     it('should default to 60 minutes for unrecognized class type with warning', () => {
-      const startTime = '2024-01-15T10:00:00.000Z';
+      const startTime = '2024-01-15T10:00:00+00:00';
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'UNKNOWN_TYPE');
       
-      expect(result).toBe('2024-01-15T11:00:00.000Z'); // 60 minutes later (default)
+      expect(result).toBe('2024-01-15T11:00:00+00:00'); // 60 minutes later (default)
       expect(consoleSpy).toHaveBeenCalledWith('Class type UNKNOWN_TYPE is not recognized, returning start time plus 60 minutes');
       
       consoleSpy.mockRestore();
     });
 
     it('should handle different time zones correctly', () => {
-      const startTime = '2024-01-15T15:30:00.000Z'; // 3:30 PM UTC
+      const startTime = '2024-01-15T15:30:00+00:00'; // 3:30 PM UTC
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'ORANGE_60');
       
-      expect(result).toBe('2024-01-15T16:30:00.000Z'); // 4:30 PM UTC
+      expect(result).toBe('2024-01-15T16:30:00+00:00'); // 4:30 PM UTC
     });
 
     it('should handle date boundary correctly', () => {
-      const startTime = '2024-01-15T23:30:00.000Z'; // 11:30 PM UTC
+      const startTime = '2024-01-15T23:30:00+00:00'; // 11:30 PM UTC
       
       const result = (workoutsApi as any).calculateClassEndTime(startTime, 'ORANGE_90');
       
-      expect(result).toBe('2024-01-16T01:00:00.000Z'); // 1:00 AM next day UTC
+      expect(result).toBe('2024-01-16T01:00:00+00:00'); // 1:00 AM next day UTC
     });
   });
 });

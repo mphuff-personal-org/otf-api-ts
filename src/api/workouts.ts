@@ -2,6 +2,7 @@ import { OtfHttpClient } from '../client/http-client';
 import { StatsTime, EquipmentType, ChallengeCategory } from '../types/workout-enums';
 import { components } from '../generated/types';
 import { BodyCompositionData } from '../models/body-composition';
+import { formatDateToPythonISO, formatDateForPythonParity, safeDateFormat } from '../utils/datetime';
 
 type Workout = components['schemas']['Workout'];
 type BookingV2 = components['schemas']['BookingV2'];
@@ -171,8 +172,8 @@ export class WorkoutsApi {
   private filterEquipmentData(equipmentData: any): any {
     if (!equipmentData) return equipmentData;
     
-    // Create a deep copy to avoid mutation
-    const filtered = JSON.parse(JSON.stringify(equipmentData));
+    // Create a deep copy to avoid mutation without converting dates
+    const filtered = this.deepCopyPreservingDates(equipmentData);
     
     // Remove max_power to match Python structure
     delete filtered.max_power;
@@ -185,14 +186,18 @@ export class WorkoutsApi {
   }
 
   /**
-   * Formats date to match Python's ISO format exactly
-   * Python: "2025-07-29T12:00:00+00:00" 
-   * JavaScript default: "2025-07-29T12:00:00.000Z"
+   * Deep copy that preserves date strings without converting them back to .000Z format
    */
-  private formatDateToPythonISO(date: Date): string {
-    // Get ISO string and convert Z format to +00:00 format
-    // Remove milliseconds (.000) and replace Z with +00:00
-    return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+  private deepCopyPreservingDates(obj: any): any {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj; // Keep Date objects as is
+    if (Array.isArray(obj)) return obj.map(item => this.deepCopyPreservingDates(item));
+    
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = this.deepCopyPreservingDates(value);
+    }
+    return result;
   }
 
   /**
@@ -483,7 +488,7 @@ export class WorkoutsApi {
     // Python returns: { class_history_uuid, class_start_time, max_hr, member_uuid, performance_summary_id, window_size, zones, telemetry: [...] }
     return {
       class_history_uuid: response.classHistoryUuid || performanceSummaryId,
-      class_start_time: response.classStartTime || null,
+      class_start_time: response.classStartTime ? formatDateToPythonISO(new Date(response.classStartTime)) : null,
       max_hr: response.maxHr || 0,
       member_uuid: response.memberUuid || this.memberUuid,
       performance_summary_id: response.classHistoryUuid || performanceSummaryId,
@@ -506,8 +511,8 @@ export class WorkoutsApi {
       apiType: 'default',
       path: `/member/members/${this.memberUuid}/out-of-studio-workout`,
       params: {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: formatDateToPythonISO(startDate),
+        endDate: formatDateToPythonISO(endDate),
       },
     });
 
@@ -893,7 +898,7 @@ export class WorkoutsApi {
       
       const enhancedItem = { ...item };
       const absoluteTime = new Date(classStart.getTime() + (item.relative_timestamp * 1000)); // Convert seconds to milliseconds
-      enhancedItem.timestamp = this.formatDateToPythonISO(absoluteTime);
+      enhancedItem.timestamp = formatDateToPythonISO(absoluteTime);
       
       return enhancedItem;
     });
@@ -904,7 +909,7 @@ export class WorkoutsApi {
       // Return the complete telemetry object structure to match Python
       return {
         class_history_uuid: telemetry.classHistoryUuid,
-        class_start_time: telemetry.classStartTime,
+        class_start_time: telemetry.classStartTime ? formatDateToPythonISO(new Date(telemetry.classStartTime)) : null,
         max_hr: telemetry.maxHr,
         member_uuid: telemetry.memberUuid,
         performance_summary_id: telemetry.classHistoryUuid, // Same as class_history_uuid
@@ -930,18 +935,18 @@ export class WorkoutsApi {
     // Match Python logic exactly
     switch (classType) {
       case 'ORANGE_60':
-        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // 60 minutes
+        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // 60 minutes
       case 'ORANGE_90':
-        return this.formatDateToPythonISO(new Date(start.getTime() + (90 * 60 * 1000))); // 90 minutes
+        return formatDateToPythonISO(new Date(start.getTime() + (90 * 60 * 1000))); // 90 minutes
       case 'STRENGTH_50':
       case 'TREAD_50':
-        return this.formatDateToPythonISO(new Date(start.getTime() + (50 * 60 * 1000))); // 50 minutes
+        return formatDateToPythonISO(new Date(start.getTime() + (50 * 60 * 1000))); // 50 minutes
       case 'OTHER':
         console.warn(`Class type ${classType} does not have defined length, returning start time plus 60 minutes`);
-        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
+        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
       default:
         console.warn(`Class type ${classType} is not recognized, returning start time plus 60 minutes`);
-        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
+        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
     }
   }
 

@@ -21,6 +21,7 @@ describe('BookingsApi', () => {
         checked_in: true,
         canceled: false,
         ratable: true,
+        status: 'Booked',
         class: {
           classUuid: 'test-class-uuid',
           name: 'Orange 60 3G',
@@ -77,7 +78,7 @@ describe('BookingsApi', () => {
             mbo_studio_id: null,
           },
           class_id: null,
-          class_type: null,
+          class_type: {},
           starts_at_utc: null,
         },
         workout: {
@@ -96,6 +97,7 @@ describe('BookingsApi', () => {
         mbo_paying_unique_id: null,
         created_at: null,
         updated_at: null,
+        status: 'Booked',
       });
 
       expect(mockClient.workoutRequest).toHaveBeenCalledWith({

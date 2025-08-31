@@ -3,6 +3,7 @@ import { components } from '../generated/types';
 type MemberDetail = components['schemas']['MemberDetail'];
 import { OtfHttpClient } from '../client/http-client';
 import { API_ENDPOINTS } from '../types/config';
+import { safeDateFormat } from '../utils/datetime';
 
 /**
  * API for member profile and membership operations
@@ -113,9 +114,9 @@ export class MembersApi {
         total_ot_live_classes_attended: data.memberClassSummary.totalOTLiveClassesAttended || null,
         total_classes_used_hrm: data.memberClassSummary.totalClassesUsedHRM || null,
         total_studios_visited: data.memberClassSummary.totalStudiosVisited || null,
-        first_visit_date: data.memberClassSummary.firstVisitDate || null,
-        last_class_visited_date: data.memberClassSummary.lastClassVisitedDate || null,
-        last_class_booked_date: data.memberClassSummary.lastClassBookedDate || null,
+        first_visit_date: safeDateFormat(data.memberClassSummary.firstVisitDate, 'first_visit_date'),
+        last_class_visited_date: safeDateFormat(data.memberClassSummary.lastClassVisitedDate, 'last_class_visited_date'),
+        last_class_booked_date: safeDateFormat(data.memberClassSummary.lastClassBookedDate, 'last_class_booked_date'),
         last_class_studio_visited: null,
       } : null,
       

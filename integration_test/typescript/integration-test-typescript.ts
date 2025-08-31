@@ -7,6 +7,7 @@
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { Otf } from '../../src/otf';
+import { formatDateToPythonISO } from '../../src/utils/datetime';
 
 function loadEnvFile(): void {
   /**
@@ -104,7 +105,7 @@ async function runTypeScriptIntegrationTests(): Promise<IntegrationTestResults |
   console.log(`🔷 Running TypeScript integration tests for ${email}`);
   
   const results: IntegrationTestResults = {
-    timestamp: new Date().toISOString(),
+    timestamp: formatDateToPythonISO(new Date()),
     typescript_version: process.version,
     otf_api_ts_version: '1.0.0',  // Current version
     tests: {},

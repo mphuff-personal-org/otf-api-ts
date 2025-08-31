@@ -1,4 +1,5 @@
 import { components } from '../generated/types';
+import { formatDateToPythonISO, formatDateForPythonParity, safeDateFormat } from '../utils/datetime';
 
 type BookingV2Base = components['schemas']['BookingV2'];
 type BookingStatus = components['schemas']['BookingStatus'];
@@ -102,11 +103,6 @@ export class BookingsApi {
    * Python: "2025-07-29T12:00:00+00:00" 
    * JavaScript default: "2025-07-29T12:00:00.000Z"
    */
-  private formatDateToPythonISO(date: Date): string {
-    // Get ISO string and convert Z format to +00:00 format
-    // Remove milliseconds (.000) and replace Z with +00:00
-    return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
-  }
 
   /**
    * Formats coach name consistently, handling undefined/null fields
@@ -168,8 +164,8 @@ export class BookingsApi {
       apiType: 'performance',
       path: '/v1/bookings/me',
       params: {
-        'starts_after': startDate.toISOString(),
-        'ends_before': endDate.toISOString(),
+        'starts_after': formatDateToPythonISO(startDate),
+        'ends_before': formatDateToPythonISO(endDate),
         'include_canceled': (!excludeCancelled).toString(),
         'expand': 'false',
       },
@@ -235,7 +231,7 @@ export class BookingsApi {
         } : null,
         class_id: data.class?.id || null,
         class_type: data.class?.type || {}, // Empty object to match Python behavior
-        starts_at_utc: data.class?.starts_at ? this.formatDateToPythonISO(new Date(data.class.starts_at)) : null,
+        starts_at_utc: data.class?.starts_at ? formatDateToPythonISO(new Date(data.class.starts_at)) : null,
       },
       
       // Workout - should now be included with correct API parameters

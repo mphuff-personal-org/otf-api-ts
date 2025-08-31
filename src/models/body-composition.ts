@@ -10,6 +10,8 @@
  * Matches Python implementation in body_composition_list.py exactly
  */
 
+import { formatDateToLocal } from '../utils/datetime';
+
 // Constants matching Python defaults
 export const DEFAULT_WEIGHT_DIVIDERS = [55.0, 70.0, 85.0, 100.0, 115.0, 130.0, 145.0, 160.0, 175.0, 190.0, 205.0];
 export const DEFAULT_SKELETAL_MUSCLE_MASS_DIVIDERS = [70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0];
@@ -50,17 +52,6 @@ export function convertKgToLbs(weightKg: number): number {
  * Python: "2024-11-16T07:13:35" (no timezone, no milliseconds)
  * JavaScript default: "2024-11-16T15:13:35.000Z" (UTC with milliseconds)
  */
-function formatDateTimeToLocal(date: Date): string {
-  // Format as local time without timezone suffix to match Python
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-}
 
 /**
  * Calculate body fat mass control value to match Python implementation
@@ -344,7 +335,7 @@ export class BodyCompositionData {
     this.height = data.height;
     this.gender = data.gender;
     this.age = parseFloat(data.age) || 0; // Convert string to number to match Python
-    this.scan_datetime = formatDateTimeToLocal(new Date(data.testDatetime));
+    this.scan_datetime = formatDateToLocal(new Date(data.testDatetime));
     this.provided_weight = data.weight;
     
     // Apply critical business logic: convert kg to lbs

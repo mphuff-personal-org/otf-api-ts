@@ -247,7 +247,7 @@ describe('Body Composition Business Logic', () => {
       expect(bodyComp.height).toBe('175');
       expect(bodyComp.gender).toBe('M');
       expect(bodyComp.age).toBe(30);
-      expect(bodyComp.scan_datetime).toEqual(new Date('2024-01-15T10:00:00Z'));
+      expect(bodyComp.scan_datetime).toBe('2024-01-15T02:00:00'); // Local format string
       expect(bodyComp.provided_weight).toBe(180.0);
       expect(bodyComp.dry_lean_mass).toBe(50.0);
       expect(bodyComp.body_fat_mass).toBe(15.0);
