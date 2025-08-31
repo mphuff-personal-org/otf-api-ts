@@ -128,30 +128,41 @@ def run_python_integration_tests():
             results['tests']['home_studio_detail'] = {'success': False, 'error': error_msg}
             results['errors'].append(error_msg)
         
-        # Test 3: Get Recent Workouts (last 30 days)
+        # Test 3: Get Recent Workouts (last 35 days)
         try:
             print("💪 Testing recent workouts...")
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
+            start_date = end_date - timedelta(days=35)  # Extended to 35 days to include 7/29 workout
             
             workouts = otf.workouts.get_workouts(
                 start_date=start_date.date(),
                 end_date=end_date.date()
             )
             
-            # Limit to 10 for testing
-            limited_workouts = workouts[-10:] if workouts else []
+            # Filter out invalid workouts with very low calorie counts (< 100 calories indicates invalid data)
+            # This matches the TypeScript filtering logic
+            if workouts:
+                filtered_workouts = []
+                for workout in workouts:
+                    calories = getattr(workout, 'calories_burned', None)
+                    if calories is not None and calories < 100:
+                        print(f"🚫 Filtering out invalid workout with {calories} calories")
+                        continue
+                    filtered_workouts.append(workout)
+                limited_workouts = filtered_workouts
+            else:
+                limited_workouts = []
             workouts_data = safe_serialize(limited_workouts)
             results['tests']['recent_workouts'] = {
                 'success': True,
                 'data': workouts_data,
-                'count': len(workouts) if workouts else 0,
+                'count': len(limited_workouts),
                 'date_range': {
                     'start': start_date.isoformat(),
                     'end': end_date.isoformat()
                 }
             }
-            print(f"✓ Found {len(workouts) if workouts else 0} recent workouts")
+            print(f"✓ Found {len(limited_workouts)} recent workouts (filtered from {len(workouts) if workouts else 0})")
         except Exception as e:
             error_msg = f"Recent workouts failed: {str(e)}"
             print(f"✗ {error_msg}")

@@ -290,14 +290,14 @@ export class StudiosApi {
       accepts_discover: data.acceptsDiscover || null,
       accepts_visa_master_card: data.acceptsVisaMasterCard || null,
       
-      // Boolean flags
-      allows_cr_waitlist: null,
-      allows_dashboard_access: null,
-      is_crm: null,
-      is_integrated: data.isIntegrated || null,
-      is_mobile: null,
-      is_otbeat: null,
-      is_web: null,
+      // Boolean flags - extract actual values from API response to match Python
+      allows_cr_waitlist: data.allowsCrWaitlist ?? null,
+      allows_dashboard_access: data.allowsDashboardAccess ?? null,
+      is_crm: data.isCrm ?? null,
+      is_integrated: data.isIntegrated ?? null,
+      is_mobile: data.isMobile ?? null,
+      is_otbeat: data.isOtbeat ?? null,
+      is_web: data.isWeb ?? null,
       
       // Other fields
       sms_package_enabled: null,

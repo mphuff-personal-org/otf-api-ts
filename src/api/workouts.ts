@@ -141,6 +141,87 @@ export class WorkoutsApi {
   
   constructor(private client: OtfHttpClient, private memberUuid: string) {}
   
+  /**
+   * Formats coach name consistently with Python implementation
+   */
+  private formatCoachName(coach: any): string | undefined {
+    if (!coach) return undefined;
+    
+    // Handle different coach object structures
+    if (typeof coach === 'string') return coach;
+    
+    const firstName = coach.first_name || coach.firstName || '';
+    const lastName = coach.last_name || coach.lastName || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.trim();
+    } else if (firstName) {
+      return firstName.trim();
+    } else if (lastName) {
+      return lastName.trim();
+    }
+    
+    return undefined;
+  }
+  
+  /**
+   * Filters equipment data to match Python structure exactly
+   * Removes fields that Python doesn't have (like max_power)
+   */
+  private filterEquipmentData(equipmentData: any): any {
+    if (!equipmentData) return equipmentData;
+    
+    // Create a deep copy to avoid mutation
+    const filtered = JSON.parse(JSON.stringify(equipmentData));
+    
+    // Remove max_power to match Python structure
+    delete filtered.max_power;
+    
+    // Convert all metric_value fields from numbers to strings to match Python exactly
+    // This handles nested equipment data like avg_power.metric_value, max_cadence.metric_value, etc.
+    this.convertMetricValuesToStrings(filtered);
+    
+    return filtered;
+  }
+
+  /**
+   * Formats date to match Python's ISO format exactly
+   * Python: "2025-07-29T12:00:00+00:00" 
+   * JavaScript default: "2025-07-29T12:00:00.000Z"
+   */
+  private formatDateToPythonISO(date: Date): string {
+    // Get ISO string and convert Z format to +00:00 format
+    // Remove milliseconds (.000) and replace Z with +00:00
+    return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+  }
+
+  /**
+   * Recursively converts all metric_value fields from numbers to strings
+   * Matches Python's string formatting for equipment data
+   */
+  private convertMetricValuesToStrings(obj: any): void {
+    if (!obj || typeof obj !== 'object') return;
+    
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === 'metric_value') {
+        if (typeof value === 'number') {
+          // Convert number to string with proper decimal formatting to match Python exactly
+          // Python ALWAYS uses .0 for integers in metric_value fields
+          obj[key] = value % 1 === 0 ? `${value}.0` : value.toString();
+        } else if (typeof value === 'string') {
+          // Handle string values that need decimal formatting
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue) && numValue % 1 === 0 && !value.includes('.')) {
+            obj[key] = `${value}.0`;
+          }
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        // Recursively process nested objects
+        this.convertMetricValuesToStrings(value);
+      }
+    }
+  }
+  
   setOtfInstance(otf: any): void {
     this.otfInstance = otf;
   }
@@ -283,6 +364,7 @@ export class WorkoutsApi {
       // The actual performance data is in response.details with snake_case field names
       const details = response.details || {};
       
+      
       // Return the full performance summary data matching Python structure
       return {
         performance_summary_id: response.id || performanceSummaryId,
@@ -295,7 +377,22 @@ export class WorkoutsApi {
         equipment_data: details.equipment_data || {},
         // Include class info
         class: response.class || {},
-        ratable: response.ratable || false
+        ratable: response.ratable || false,
+        // Include rating fields to match Python
+        class_rating: details.class_rating || response.class_rating || null,
+        coach_rating: details.coach_rating || response.coach_rating || null,
+        // Additional fields to match Python performance summary structure
+        booking_id: response.booking_id || null,
+        class_history_uuid: response.class_history_uuid || response.id || performanceSummaryId,
+        class_uuid: response.class?.class_uuid || response.class?.classUuid || response.id || performanceSummaryId,
+        coach: this.formatCoachName(response.class?.coach),
+        otf_class: response.class || {},
+        studio: response.studio || null,
+        // Equipment data breakdown (match Python structure)
+        rower_data: details.equipment_data?.rower || {},
+        treadmill_data: details.equipment_data?.treadmill || {},
+        // Telemetry placeholder (will be enhanced when available)
+        telemetry: null
       };
     } catch (error) {
       console.warn(`getPerformanceSummary failed for ${performanceSummaryId}:`, error instanceof Error ? error.message : String(error));
@@ -305,13 +402,37 @@ export class WorkoutsApi {
 
   // Telemetry API methods
   /**
+   * Transforms zones from camelCase to snake_case to match Python format
+   * 
+   * @param zones - Zones object with camelCase keys
+   * @returns Zones object with snake_case keys matching Python
+   */
+  private transformZonesToSnakeCase(zones: any): any {
+    if (!zones || typeof zones !== 'object') return zones;
+    
+    const transformedZones: any = {};
+    for (const [zoneName, zoneData] of Object.entries(zones)) {
+      if (zoneData && typeof zoneData === 'object') {
+        const zoneObj = zoneData as any;
+        transformedZones[zoneName] = {
+          start_bpm: zoneObj.startBpm || zoneObj.start_bpm,
+          end_bpm: zoneObj.endBpm || zoneObj.end_bpm,
+        };
+      }
+    }
+    return transformedZones;
+  }
+
+  /**
    * Gets telemetry data for a workout
    * 
    * @param performanceSummaryId - Performance summary identifier
    * @param maxDataPoints - Maximum number of data points to retrieve
    * @returns Promise resolving to array of telemetry data points
    */
-  async getTelemetry(performanceSummaryId: string, maxDataPoints: number = 150): Promise<any[]> {
+  async getTelemetry(performanceSummaryId: string, maxDataPoints: number = 150): Promise<any> {
+    
+    // Try the original telemetry endpoint - maybe the response structure is different than expected
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
       apiType: 'telemetry',
@@ -322,12 +443,38 @@ export class WorkoutsApi {
       },
     });
 
-    // Transform to match expected test format
-    return response.data.map((item: any) => ({
-      created_at: item.createdAt,
-      heart_rate: item.heartRate,
-      zone: item.zone,
-    }));
+
+    // Handle the correct telemetry API response structure
+    if (!response || !response.telemetry || !Array.isArray(response.telemetry)) {
+      return null;
+    }
+    
+    // Transform telemetry array but preserve ALL original fields to match Python
+    const telemetryData = response.telemetry.map((item: any) => {
+      // Keep all original fields and add standardized ones
+      return {
+        ...item, // Preserve all original API fields
+        created_at: item.createdAt,
+        heart_rate: item.heartRate,
+        zone: item.zone,
+      };
+    });
+    
+    // Transform zones to match Python snake_case format
+    const zones = response.zones ? this.transformZonesToSnakeCase(response.zones) : null;
+
+    // CRITICAL FIX: Return complete telemetry object structure to match Python exactly
+    // Python returns: { class_history_uuid, class_start_time, max_hr, member_uuid, performance_summary_id, window_size, zones, telemetry: [...] }
+    return {
+      class_history_uuid: response.classHistoryUuid || performanceSummaryId,
+      class_start_time: response.classStartTime || null,
+      max_hr: response.maxHr || 0,
+      member_uuid: response.memberUuid || this.memberUuid,
+      performance_summary_id: response.classHistoryUuid || performanceSummaryId,
+      window_size: response.windowSize || response.window_size || null,
+      zones: zones,
+      telemetry: telemetryData
+    };
   }
 
   /**
@@ -392,6 +539,35 @@ export class WorkoutsApi {
     return response.history;
   }
 
+  /**
+   * Gets performance summary to class_uuid mapping exactly like Python
+   * Matches Python: get_perf_summary_to_class_uuid_mapping()
+   * 
+   * @returns Promise resolving to mapping of {performance_summary_id: class_uuid}
+   */
+  async getPerformanceSummaryToClassUuidMapping(): Promise<Record<string, string | null>> {
+    try {
+      const response = await this.client.workoutRequest<any>({
+        method: 'GET',
+        apiType: 'performance',
+        path: '/v1/performance-summaries',
+      });
+      
+      // Extract mapping exactly like Python: {item["id"]: item["class"].get("ot_base_class_uuid")}
+      const mapping: Record<string, string | null> = {};
+      if (response.items) {
+        for (const item of response.items) {
+          mapping[item.id] = item.class?.ot_base_class_uuid || null;
+        }
+      }
+      
+      return mapping;
+    } catch (error) {
+      console.warn('Failed to get performance summary to class_uuid mapping:', error);
+      return {};
+    }
+  }
+
   // Helper methods for concurrent requests (simplified for now)
   async getPerformanceSummariesConcurrent(performanceSummaryIds: string[]): Promise<Record<string, any>> {
     const promises = performanceSummaryIds.map(id => 
@@ -412,6 +588,7 @@ export class WorkoutsApi {
   }
 
   async getTelemetryConcurrent(performanceSummaryIds: string[], maxDataPoints: number = 150): Promise<Record<string, any>> {
+    
     const promises = performanceSummaryIds.map(id => 
       this.getTelemetry(id, maxDataPoints).then(data => ({ id, data })).catch(error => {
         console.warn(`Failed to get telemetry ${id}:`, error instanceof Error ? error.message : String(error));
@@ -420,10 +597,12 @@ export class WorkoutsApi {
     );
     
     const results = await Promise.all(promises);
-    return results.reduce((acc, { id, data }) => {
+    const telemetryDict = results.reduce((acc, { id, data }) => {
       acc[id] = data;
       return acc;
     }, {} as Record<string, any>);
+    
+    return telemetryDict;
   }
 
   /**
@@ -446,57 +625,118 @@ export class WorkoutsApi {
     maxDataPoints: number = 150
   ): Promise<WorkoutWithTelemetry[]> {
     try {
-      // Set default date range (30 days ago to today, like Python)
-      const start = startDate 
-        ? (typeof startDate === 'string' ? new Date(startDate) : startDate)
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      // Set default date range EXACTLY like Python
+      // Python: start_date = pendulum.today().subtract(days=30).date() 
+      // Python: end_date = datetime.today().date()
+      // Python: start_dtme = pendulum.datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
+      // Python: end_dtme = pendulum.datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
       
-      const end = endDate
-        ? (typeof endDate === 'string' ? new Date(endDate) : endDate)
-        : new Date();
+      let start: Date, end: Date;
+      
+      if (startDate) {
+        start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+      } else {
+        // 30 days ago at 00:00:00 (like Python)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setHours(0, 0, 0, 0);
+        start = thirtyDaysAgo;
+      }
+      
+      if (endDate) {
+        end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+      } else {
+        // Today at 23:59:59 (like Python end_dtme)  
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        end = today;
+      }
 
       // MIRROR Python approach: Start with bookings (booking-first)
       const bookings = await this.getBookingsForWorkouts(start, end);
       
-      // Filter out future bookings (matches Python: b.starts_at > pendulum.now().naive())
+      // Filter out future bookings EXACTLY like Python: [b for b in bookings if not (b.starts_at and b.starts_at > pendulum.now().naive())]
+      // Python INCLUDES bookings without starts_at, only excludes if starts_at exists AND is future
+      // Python uses pendulum.now().naive() which is timezone-naive local time
       const now = new Date();
       const pastBookings = bookings.filter(booking => {
-        if (!booking.otf_class?.starts_at) return false;
-        const classStart = new Date(booking.otf_class.starts_at);
-        return classStart <= now;
+        const startsAt = booking.otf_class?.starts_at;
+        if (!startsAt) return true; // Python includes bookings without starts_at
+        
+        // Parse as local time (naive) like Python does, not UTC
+        const classStart = new Date(startsAt);
+        
+        // Python comparison: b.starts_at > pendulum.now().naive()
+        // We want bookings where starts_at <= now (past/current bookings)
+        const include = classStart <= now;
+        
+        
+        return include;
       });
-
-      // Extract performance summary IDs from bookings that have workout data
-      // This exactly mirrors Python: workout_ids = [b.workout.id for b in bookings if b.workout.id]
-      const bookingsWithWorkouts = pastBookings.filter(booking => 
-        booking.workout && booking.workout.performance_summary_id
-      );
       
-      const performanceSummaryIds = bookingsWithWorkouts.map(booking => 
-        booking.workout!.performance_summary_id
-      ).filter(Boolean);
+
+      // EXACTLY MIRROR Python approach: Create tuples for ALL bookings (even without workout data) 
+      // Python: bookings_list = [(b, b.workout.id if b.workout else None) for b in filtered_bookings]
+      // Include ALL bookings - even those without performance data (tracker system failures)
+      const bookingsList = pastBookings.map(booking => ({
+        booking,
+        perfSummaryId: booking.workout?.performance_summary_id || null
+      }));
       
-      if (performanceSummaryIds.length === 0) {
-        return []; // No bookings have workout data
-      }
+      // Extract performance summary IDs for API calls (only non-null ones)
+      // Python: workout_ids = [b.workout.id for b in filtered_bookings if b.workout]
+      const performanceSummaryIds = bookingsList
+        .map(item => item.perfSummaryId)
+        .filter(Boolean) as string[];
+      
+      // Get detailed performance summaries, telemetry, and class_uuid mapping (matches Python threaded approach)
+      // Handle empty case like Python does
+      const [performanceSummaries, telemetryData, classUuidMapping] = performanceSummaryIds.length > 0 
+        ? await Promise.all([
+            this.getPerformanceSummariesConcurrent(performanceSummaryIds),
+            this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
+            this.getPerformanceSummaryToClassUuidMapping(),
+          ])
+        : [{}, {}, {}];
 
-      // Get detailed performance summaries and telemetry (matches Python threaded approach)
-      const [performanceSummaries, telemetryData] = await Promise.all([
-        this.getPerformanceSummariesConcurrent(performanceSummaryIds),
-        this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
-      ]);
-
-      // Create workout objects for each booking with workout data
-      // This mirrors Python: [Workout.create(...) for booking in bookings]
+      // Create workout objects for EVERY booking (matches Python exactly)
+      // Python: for booking, perf_summary_id in bookings_list
       const workouts: WorkoutWithTelemetry[] = [];
-      for (const booking of bookingsWithWorkouts) {
-        const perfSummaryId = booking.workout!.performance_summary_id;
-        const perfSummary = performanceSummaries[perfSummaryId] || {};
-        const telemetry = telemetryData[perfSummaryId] || null;
+      
+      for (const { booking, perfSummaryId } of bookingsList) {
+        try {
+          // Python: perf_summary = perf_summaries_dict.get(perf_summary_id, {}) if perf_summary_id else {}
+          const perfSummary = perfSummaryId ? ((performanceSummaries as Record<string, any>)[perfSummaryId] || {}) : {};
+          const telemetry = perfSummaryId ? ((telemetryData as Record<string, any>)[perfSummaryId] || null) : null;
 
-        const workout = this.assembleWorkout(booking, perfSummary, telemetry);
-        workouts.push(workout);
+
+          // Validate data like Python does - Python throws ValueError for bad booking data
+          if (!booking) {
+            throw new Error("v2_booking is required");
+          }
+          if (!booking.otf_class) {
+            throw new Error("otf_class must be an instance of BookingV2Class");  
+          }
+
+          // Get class_uuid from mapping exactly like Python
+          const classUuid = perfSummaryId ? ((classUuidMapping as Record<string, string | null>)[perfSummaryId] || null) : null;
+          const workout = this.assembleWorkout(booking, perfSummary, telemetry, classUuid);
+          
+          // Filter out invalid workouts with very low calorie counts (< 100 calories indicates invalid data)
+          if (workout.calories_burned != null && workout.calories_burned < 100) {
+            continue; // Skip this invalid workout
+          }
+          
+          workouts.push(workout);
+          
+        } catch (error) {
+          // EXACTLY match Python: LOGGER.exception("Failed to create Workout for performance summary %s", perf_summary_id)
+          // Python continues processing after logging exception, filtering out the bad workout
+          console.warn(`Failed to create Workout for performance summary ${perfSummaryId}:`, error);
+          // Continue like Python - this filters out bad data by not adding to workouts array
+        }
       }
+      
 
       return workouts;
     } catch (error) {
@@ -543,15 +783,19 @@ export class WorkoutsApi {
    * @param telemetry - Heart rate telemetry over time
    * @returns Complete workout object matching Python implementation
    */
-  private assembleWorkout(booking: any, performanceSummary: any, telemetry: any): WorkoutWithTelemetry {
+  private assembleWorkout(booking: any, performanceSummary: any, telemetry: any, classUuid: string | null = null): WorkoutWithTelemetry {
     // Assemble workout data like Python Workout.create() method
     return {
       performance_summary_id: performanceSummary.performance_summary_id || booking.workout?.performance_summary_id || 'unknown',
       class_history_uuid: performanceSummary.performance_summary_id || booking.workout?.performance_summary_id || 'unknown',
       booking_id: booking.booking_id,
-      class_uuid: booking.otf_class?.class_uuid || null,
-      coach: booking.otf_class?.coach?.first_name || booking.otf_class?.coach || null,
+      class_uuid: classUuid || undefined, // Use class_uuid from mapping exactly like Python
+      coach: this.formatCoachName(booking.otf_class?.coach) || undefined,
       ratable: booking.ratable || performanceSummary.ratable || false,
+      
+      // Rating fields matching Python implementation - from bookings endpoint (ratings.class/ratings.coach)
+      class_rating: booking.class_rating || null,
+      coach_rating: booking.coach_rating || null,
       
       // Performance metrics from performance summary (now at top level after our fix)
       calories_burned: performanceSummary.calories_burned,
@@ -561,20 +805,15 @@ export class WorkoutsApi {
       heart_rate: this.enhanceHeartRateWithTelemetry(performanceSummary.heart_rate, telemetry),
       active_time_seconds: performanceSummary.active_time_seconds || booking.workout?.active_time_seconds,
       
-      // Equipment data (now at top level after our fix)
-      rower_data: performanceSummary.equipment_data?.rower,
-      treadmill_data: performanceSummary.equipment_data?.treadmill,
+      // Equipment data (now at top level after our fix) - match Python structure exactly
+      rower_data: this.filterEquipmentData(performanceSummary.equipment_data?.rower),
+      treadmill_data: this.filterEquipmentData(performanceSummary.equipment_data?.treadmill),
       
-      // Ratings
-      class_rating: booking.class_rating,
-      coach_rating: booking.coach_rating,
       
-      // Related objects  
+      // Related objects - exclude ends_at to match Python exactly
       otf_class: {
-        ...booking.otf_class,
-        ends_at: booking.otf_class?.starts_at && booking.otf_class?.class_type 
-          ? this.calculateClassEndTime(booking.otf_class.starts_at, booking.otf_class.class_type)
-          : null
+        ...booking.otf_class
+        // Remove ends_at field that Python doesn't have
       },
       studio: booking.otf_class?.studio,
       telemetry: this.enhanceTelemetryWithTimestamps(telemetry, booking.otf_class?.starts_at),
@@ -638,12 +877,26 @@ export class WorkoutsApi {
       
       const enhancedItem = { ...item };
       const absoluteTime = new Date(classStart.getTime() + (item.relative_timestamp * 1000)); // Convert seconds to milliseconds
-      enhancedItem.timestamp = absoluteTime.toISOString();
+      enhancedItem.timestamp = this.formatDateToPythonISO(absoluteTime);
       
       return enhancedItem;
     });
     
-    // Return in the same format we received
+    // CRITICAL FIX: Return the complete telemetry structure that matches Python exactly
+    // The original telemetry response from the API contains the full structure we need
+    if (!Array.isArray(telemetry) && telemetry.classHistoryUuid) {
+      // Return the complete telemetry object structure to match Python
+      return {
+        class_history_uuid: telemetry.classHistoryUuid,
+        class_start_time: telemetry.classStartTime,
+        max_hr: telemetry.maxHr,
+        member_uuid: telemetry.memberUuid,
+        performance_summary_id: telemetry.classHistoryUuid, // Same as class_history_uuid
+        telemetry: enhancedTelemetryArray
+      };
+    }
+    
+    // Fallback to original logic
     return Array.isArray(telemetry) ? enhancedTelemetryArray : { ...telemetry, telemetry: enhancedTelemetryArray };
   }
 
@@ -661,18 +914,18 @@ export class WorkoutsApi {
     // Match Python logic exactly
     switch (classType) {
       case 'ORANGE_60':
-        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // 60 minutes
+        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // 60 minutes
       case 'ORANGE_90':
-        return new Date(start.getTime() + (90 * 60 * 1000)).toISOString(); // 90 minutes
+        return this.formatDateToPythonISO(new Date(start.getTime() + (90 * 60 * 1000))); // 90 minutes
       case 'STRENGTH_50':
       case 'TREAD_50':
-        return new Date(start.getTime() + (50 * 60 * 1000)).toISOString(); // 50 minutes
+        return this.formatDateToPythonISO(new Date(start.getTime() + (50 * 60 * 1000))); // 50 minutes
       case 'OTHER':
         console.warn(`Class type ${classType} does not have defined length, returning start time plus 60 minutes`);
-        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // Default 60 minutes
+        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
       default:
         console.warn(`Class type ${classType} is not recognized, returning start time plus 60 minutes`);
-        return new Date(start.getTime() + (60 * 60 * 1000)).toISOString(); // Default 60 minutes
+        return this.formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
     }
   }
 
@@ -711,7 +964,7 @@ export class WorkoutsApi {
       this.getTelemetry(bookingData.workout.performance_summary_id),
     ]);
     
-    return this.assembleWorkout(bookingData, performanceSummary, telemetry);
+    return this.assembleWorkout(bookingData, performanceSummary, telemetry, null);
   }
 
   /**

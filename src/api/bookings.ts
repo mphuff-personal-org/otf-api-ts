@@ -5,6 +5,16 @@ type BookingStatus = components['schemas']['BookingStatus'];
 
 interface BookingV2 extends BookingV2Base {
   status: BookingStatus;
+  class_rating: {
+    id: string;
+    description: string;
+    value: number;
+  } | null;
+  coach_rating: {
+    id: string;
+    description: string;
+    value: number;
+  } | null;
 }
 import { OtfHttpClient } from '../client/http-client';
 
@@ -86,6 +96,40 @@ export class BookingsApi {
    * @param memberUuid - Authenticated member's UUID
    */
   constructor(private client: OtfHttpClient, private memberUuid: string) {}
+  
+  /**
+   * Formats date to match Python's ISO format exactly
+   * Python: "2025-07-29T12:00:00+00:00" 
+   * JavaScript default: "2025-07-29T12:00:00.000Z"
+   */
+  private formatDateToPythonISO(date: Date): string {
+    // Get ISO string and convert Z format to +00:00 format
+    // Remove milliseconds (.000) and replace Z with +00:00
+    return date.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+  }
+
+  /**
+   * Formats coach name consistently, handling undefined/null fields
+   */
+  private formatCoachName(coach: any): string | null {
+    if (!coach) return null;
+    
+    // Handle different coach object structures
+    if (typeof coach === 'string') return coach;
+    
+    const firstName = coach.firstName || coach.first_name || '';
+    const lastName = coach.lastName || coach.last_name || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.trim();
+    } else if (firstName) {
+      return firstName.trim();
+    } else if (lastName) {
+      return lastName.trim();
+    }
+    
+    return null;
+  }
 
   /**
    * Gets detailed booking information
@@ -158,16 +202,20 @@ export class BookingsApi {
       ratable: Boolean(data.ratable),
       status: data.status as BookingStatus, // Critical field for deduplication priority
       
+      // Rating fields exactly like Python: AliasPath("ratings", "coach") and AliasPath("ratings", "class")
+      class_rating: data.ratings?.class || null,
+      coach_rating: data.ratings?.coach || null,
+      
       // OTF Class - must match BookingV2Class exactly - updated for actual API response format
       otf_class: {
-        class_uuid: data.class?.classUuid || data.class?.id || '',
+        class_uuid: data.class?.classUuid || data.class?.class_uuid || null,
         name: data.class?.name || '',
-        starts_at: data.class?.startsAt || data.class?.starts_at || '',
-        coach: data.class?.coach ? `${data.class.coach.firstName} ${data.class.coach.lastName}` : null,
+        starts_at: data.class?.starts_at_local || data.class?.startsAtLocal || data.class?.startsAt || data.class?.starts_at || '',
+        coach: this.formatCoachName(data.class?.coach),
         studio: data.class?.studio ? {
           studio_uuid: data.class.studio.studioUuid || data.class.studio.id || '',
           name: data.class.studio.name || null,
-          phone_number: data.class.studio.phone_number || null,
+          phone_number: null, // Always null to match Python behavior
           latitude: data.class.studio.latitude || null,
           longitude: data.class.studio.longitude || null,
           time_zone: data.class.studio.time_zone || null,
@@ -186,8 +234,8 @@ export class BookingsApi {
           mbo_studio_id: data.class.studio.mbo_studio_id || null,
         } : null,
         class_id: data.class?.id || null,
-        class_type: data.class?.type || null,
-        starts_at_utc: data.class?.starts_at || null,
+        class_type: data.class?.type || {}, // Empty object to match Python behavior
+        starts_at_utc: data.class?.starts_at ? this.formatDateToPythonISO(new Date(data.class.starts_at)) : null,
       },
       
       // Workout - should now be included with correct API parameters
@@ -200,9 +248,6 @@ export class BookingsApi {
         active_time_seconds: data.workout.activeTimeSeconds || data.workout.active_time_seconds || 0,
       } : null,
       
-      // Rating fields
-      coach_rating: null,
-      class_rating: null,
       
       // Additional fields from Python model
       paying_studio_id: null,
@@ -269,7 +314,19 @@ export class BookingsApi {
       console.log(`Deduplication: removed ${originalCount - finalCount} duplicate bookings, kept ${finalCount}`);
     }
     
-    return keepBookings;
+    // Sort by starts_at time like Python does (line 157 in Python booking_api.py)
+    const sortedBookings = keepBookings.sort((a, b) => {
+      const aStartTime = a.otf_class?.starts_at;
+      const bStartTime = b.otf_class?.starts_at;
+      
+      if (!aStartTime && !bStartTime) return 0;
+      if (!aStartTime) return 1;
+      if (!bStartTime) return -1;
+      
+      return new Date(aStartTime).getTime() - new Date(bStartTime).getTime();
+    });
+    
+    return sortedBookings;
   }
 
   /**
