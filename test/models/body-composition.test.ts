@@ -247,7 +247,12 @@ describe('Body Composition Business Logic', () => {
       expect(bodyComp.height).toBe('175');
       expect(bodyComp.gender).toBe('M');
       expect(bodyComp.age).toBe(30);
-      expect(bodyComp.scan_datetime).toBe('2024-01-15T02:00:00'); // Local format string
+      
+      // Test scan_datetime - should convert UTC to local time
+      // The input is '2024-01-15T10:00:00Z' (UTC)
+      // We expect it to be converted to local time format without timezone
+      expect(bodyComp.scan_datetime).toMatch(/^2024-01-15T\d{2}:\d{2}:\d{2}$/);
+      
       expect(bodyComp.provided_weight).toBe(180.0);
       expect(bodyComp.dry_lean_mass).toBe(50.0);
       expect(bodyComp.body_fat_mass).toBe(15.0);

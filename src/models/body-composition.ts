@@ -49,8 +49,8 @@ export function convertKgToLbs(weightKg: number): number {
 
 /**
  * Format datetime to match Python's format exactly
- * Python: "2024-11-16T07:13:35" (no timezone, no milliseconds)
- * JavaScript default: "2024-11-16T15:13:35.000Z" (UTC with milliseconds)
+ * Python: '2024-11-16T07:13:35' (no timezone, no milliseconds)
+ * JavaScript default: '2024-11-16T15:13:35.000Z' (UTC with milliseconds)
  */
 
 /**
@@ -78,7 +78,7 @@ function calculateBodyFatMassControl(data: any): number {
 
 /**
  * Parse semicolon-separated divider strings to float arrays
- * Matches Python: [float(i) for i in v.split(";") if i.strip()]
+ * Matches Python: [float(i) for i in v.split(';') if i.strip()]
  * Handles empty strings gracefully by returning empty array
  */
 export function parseDividersString(dividersStr: string): number[] {
