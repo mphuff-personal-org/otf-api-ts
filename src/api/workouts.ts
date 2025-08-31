@@ -449,15 +449,31 @@ export class WorkoutsApi {
       return null;
     }
     
-    // Transform telemetry array but preserve ALL original fields to match Python
+    // Transform telemetry array to match Python structure exactly
     const telemetryData = response.telemetry.map((item: any) => {
-      // Keep all original fields and add standardized ones
-      return {
-        ...item, // Preserve all original API fields
+      // Transform to match Python snake_case field names
+      const transformedItem: any = {
+        // Core fields with snake_case transformation
+        agg_calories: item.aggCalories || item.agg_calories || 0,
+        agg_splats: item.aggSplats || item.agg_splats || 0,
+        hr: item.hr || 0,
+        relative_timestamp: item.relativeTimestamp || item.relative_timestamp || item.timestamp || 0,
+        
+        // Equipment data - preserve complete structure
+        tread_data: item.treadData || item.tread_data || null,
+        row_data: item.rowData || item.row_data || null,
+        
+        // Additional fields (keep original names if they exist)
         created_at: item.createdAt,
         heart_rate: item.heartRate,
         zone: item.zone,
       };
+
+      // Add timestamp field (calculated later in enhanceTelemetryWithTimestamps)
+      // Set as null for now, will be calculated later
+      transformedItem.timestamp = null;
+
+      return transformedItem;
     });
     
     // Transform zones to match Python snake_case format
