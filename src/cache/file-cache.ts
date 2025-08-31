@@ -52,7 +52,7 @@ export class FileCache implements Cache {
     try {
       const files = await fs.readdir(this.cacheDir);
       await Promise.all(
-        files.map(file => fs.unlink(path.join(this.cacheDir, file)))
+        files.map(file => fs.unlink(path.join(this.cacheDir, file))),
       );
     } catch {
       // Ignore errors if directory doesn't exist

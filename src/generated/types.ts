@@ -31,7 +31,7 @@ export interface components {
              * Gender
              * @enum {string}
              */
-            gender: "M" | "F";
+            gender: 'M' | 'F';
             /** Age */
             age: number;
             /**
@@ -44,8 +44,8 @@ export interface components {
              * @description Weight in pounds, provided by member at time of scan
              */
             provided_weight: number;
-            lean_body_mass_details: components["schemas"]["LeanBodyMass"];
-            lean_body_mass_percent_details: components["schemas"]["LeanBodyMassPercent"];
+            lean_body_mass_details: components['schemas']['LeanBodyMass'];
+            lean_body_mass_percent_details: components['schemas']['LeanBodyMassPercent'];
             /**
              * Total Body Weight
              * @description Total body weight in pounds, based on scan results
@@ -79,12 +79,12 @@ export interface components {
             weight_dividers: number[];
             /** Weight Plot Point */
             weight_plot_point: number;
-            body_fat_mass_details: components["schemas"]["BodyFatMass"];
-            body_fat_mass_percent_details: components["schemas"]["BodyFatMassPercent"];
-            total_body_weight_details: components["schemas"]["TotalBodyWeight"];
-            intra_cellular_water_details: components["schemas"]["IntraCellularWater"];
-            extra_cellular_water_details: components["schemas"]["ExtraCellularWater"];
-            extra_cellular_water_over_total_body_water_details: components["schemas"]["ExtraCellularWaterOverTotalBodyWater"];
+            body_fat_mass_details: components['schemas']['BodyFatMass'];
+            body_fat_mass_percent_details: components['schemas']['BodyFatMassPercent'];
+            total_body_weight_details: components['schemas']['TotalBodyWeight'];
+            intra_cellular_water_details: components['schemas']['IntraCellularWater'];
+            extra_cellular_water_details: components['schemas']['ExtraCellularWater'];
+            extra_cellular_water_over_total_body_water_details: components['schemas']['ExtraCellularWaterOverTotalBodyWater'];
             /** Visceral Fat Level */
             visceral_fat_level: number;
             /** Visceral Fat Area */
@@ -109,7 +109,7 @@ export interface components {
             booking_uuid: string;
             /** Is Intro */
             is_intro: boolean;
-            status: components["schemas"]["BookingStatus"];
+            status: components['schemas']['BookingStatus'];
             /**
              * Booked Date
              * @default null
@@ -142,7 +142,7 @@ export interface components {
              * @default null
              */
             waitlist_position: number | null;
-            otf_class: components["schemas"]["OtfClass"];
+            otf_class: components['schemas']['OtfClass'];
             /**
              * Is Home Studio
              * @description Custom helper field to determine if at home studio
@@ -244,13 +244,13 @@ export interface components {
             canceled_at: string | null;
             /** Ratable */
             ratable: boolean;
-            otf_class: components["schemas"]["BookingV2Class"];
+            otf_class: components['schemas']['BookingV2Class'];
             /** @default null */
-            workout: components["schemas"]["BookingV2Workout"] | null;
+            workout: components['schemas']['BookingV2Workout'] | null;
             /** @default null */
-            coach_rating: components["schemas"]["Rating"] | null;
+            coach_rating: components['schemas']['Rating'] | null;
             /** @default null */
-            class_rating: components["schemas"]["Rating"] | null;
+            class_rating: components['schemas']['Rating'] | null;
             /**
              * Paying Studio Id
              * @default null
@@ -295,7 +295,7 @@ export interface components {
             class_id: string;
             /** Name */
             name: string;
-            class_type: components["schemas"]["ClassType"];
+            class_type: components['schemas']['ClassType'];
             /**
              * Starts At
              * Format: date-time
@@ -303,7 +303,7 @@ export interface components {
              */
             starts_at: string;
             /** @default null */
-            studio: components["schemas"]["BookingV2Studio"] | null;
+            studio: components['schemas']['BookingV2Studio'] | null;
             /**
              * Coach
              * @default null
@@ -324,11 +324,11 @@ export interface components {
         /** ChallengeTracker */
         ChallengeTracker: {
             /** Programs */
-            programs?: components["schemas"]["Program"][];
+            programs?: components['schemas']['Program'][];
             /** Challenges */
-            challenges?: components["schemas"]["Challenge"][];
+            challenges?: components['schemas']['Challenge'][];
             /** Benchmarks */
-            benchmarks?: components["schemas"]["Benchmark"][];
+            benchmarks?: components['schemas']['Benchmark'][];
         };
         /** EmailNotificationSettings */
         EmailNotificationSettings: {
@@ -366,14 +366,14 @@ export interface components {
              */
             challenge_sub_category_id: number | null;
             /** @default null */
-            equipment_id: components["schemas"]["EquipmentType"] | null;
+            equipment_id: components['schemas']['EquipmentType'] | null;
             /**
              * Equipment Name
              * @default null
              */
             equipment_name: string | null;
             /** @default null */
-            metric_entry: components["schemas"]["MetricEntry"] | null;
+            metric_entry: components['schemas']['MetricEntry'] | null;
             /**
              * Challenge Name
              * @default null
@@ -400,9 +400,9 @@ export interface components {
              */
             unit: string | null;
             /** @default null */
-            goals: components["schemas"]["Goal"] | null;
+            goals: components['schemas']['Goal'] | null;
             /** Challenge Histories */
-            challenge_histories?: components["schemas"]["ChallengeHistory"][];
+            challenge_histories?: components['schemas']['ChallengeHistory'][];
         };
         /** InStudioStatsData */
         InStudioStatsData: {
@@ -481,12 +481,12 @@ export interface components {
              * @description Cognito user ID, not necessary for end users. Also on OtfUser object.
              */
             cognito_id: string;
-            home_studio: components["schemas"]["StudioDetail"];
-            profile: components["schemas"]["MemberProfile"];
+            home_studio: components['schemas']['StudioDetail'];
+            profile: components['schemas']['MemberProfile'];
             /** @default null */
-            class_summary: components["schemas"]["MemberClassSummary"] | null;
+            class_summary: components['schemas']['MemberClassSummary'] | null;
             /** Addresses */
-            addresses?: components["schemas"]["Address"][] | null;
+            addresses?: components['schemas']['Address'][] | null;
             /**
              * Studio Display Name
              * @description The value that is displayed on tread/rower tablets and OTBeat screens
@@ -823,7 +823,7 @@ export interface components {
              * @default null
              */
             quantity: number | null;
-            studio: components["schemas"]["StudioDetail"];
+            studio: components['schemas']['StudioDetail'];
             /**
              * Member Fee Id
              * @default null
@@ -887,8 +887,8 @@ export interface components {
             is_available: boolean;
             /** Is Cancelled */
             is_cancelled: boolean;
-            studio: components["schemas"]["StudioDetail"];
-            coach: components["schemas"]["Coach"];
+            studio: components['schemas']['StudioDetail'];
+            coach: components['schemas']['Coach'];
             /**
              * Coach Id
              * @description Not used by API
@@ -1124,13 +1124,13 @@ export interface components {
              */
             step_count: number | null;
             /** @default null */
-            zone_time_minutes: components["schemas"]["ZoneTimeMinutes"] | null;
+            zone_time_minutes: components['schemas']['ZoneTimeMinutes'] | null;
             /** @default null */
-            heart_rate: components["schemas"]["HeartRate"] | null;
+            heart_rate: components['schemas']['HeartRate'] | null;
             /** @default null */
-            rower_data: components["schemas"]["Rower"] | null;
+            rower_data: components['schemas']['Rower'] | null;
             /** @default null */
-            treadmill_data: components["schemas"]["Treadmill"] | null;
+            treadmill_data: components['schemas']['Treadmill'] | null;
         };
         /** SmsNotificationSettings */
         SmsNotificationSettings: {
@@ -1157,9 +1157,9 @@ export interface components {
         };
         /** StatsResponse */
         StatsResponse: {
-            all_stats: components["schemas"]["TimeStats_AllStatsData_"];
-            in_studio: components["schemas"]["TimeStats_InStudioStatsData_"];
-            out_studio: components["schemas"]["TimeStats_OutStudioStatsData_"];
+            all_stats: components['schemas']['TimeStats_AllStatsData_'];
+            in_studio: components['schemas']['TimeStats_InStudioStatsData_'];
+            out_studio: components['schemas']['TimeStats_OutStudioStatsData_'];
         };
         /** StudioDetail */
         StudioDetail: {
@@ -1179,7 +1179,7 @@ export interface components {
              * @default null
              */
             distance: number | null;
-            location?: components["schemas"]["StudioLocation"];
+            location?: components['schemas']['StudioLocation'];
             /**
              * Name
              * @default null
@@ -1189,7 +1189,7 @@ export interface components {
              * @description Active, Temporarily Closed, Coming Soon
              * @default null
              */
-            status: components["schemas"]["StudioStatus"] | null;
+            status: components['schemas']['StudioStatus'] | null;
             /**
              * Time Zone
              * @default null
@@ -1307,7 +1307,7 @@ export interface components {
         };
         /** StudioService */
         StudioService: {
-            studio: components["schemas"]["StudioDetail"];
+            studio: components['schemas']['StudioDetail'];
             /** Service Uuid */
             service_uuid: string;
             /**
@@ -1434,14 +1434,14 @@ export interface components {
              * @description The zones associated with the telemetry.
              * @default null
              */
-            zones: components["schemas"]["Zones"] | null;
+            zones: components['schemas']['Zones'] | null;
             /**
              * Window Size
              * @default null
              */
             window_size: number | null;
             /** Telemetry */
-            telemetry?: components["schemas"]["TelemetryItem"][];
+            telemetry?: components['schemas']['TelemetryItem'][];
         };
         /** TelemetryHistoryItem */
         TelemetryHistoryItem: {
@@ -1456,7 +1456,7 @@ export interface components {
              */
             max_hr_value: number | null;
             /** @default null */
-            zones: components["schemas"]["Zones"] | null;
+            zones: components['schemas']['Zones'] | null;
             /**
              * Change From Previous
              * @default null
@@ -1475,13 +1475,13 @@ export interface components {
         };
         /** TimeStats */
         TimeStats: {
-            last_year: components["schemas"]["OtfItemBase"];
-            this_year: components["schemas"]["OtfItemBase"];
-            last_month: components["schemas"]["OtfItemBase"];
-            this_month: components["schemas"]["OtfItemBase"];
-            last_week: components["schemas"]["OtfItemBase"];
-            this_week: components["schemas"]["OtfItemBase"];
-            all_time: components["schemas"]["OtfItemBase"];
+            last_year: components['schemas']['OtfItemBase'];
+            this_year: components['schemas']['OtfItemBase'];
+            last_month: components['schemas']['OtfItemBase'];
+            this_month: components['schemas']['OtfItemBase'];
+            last_week: components['schemas']['OtfItemBase'];
+            this_week: components['schemas']['OtfItemBase'];
+            all_time: components['schemas']['OtfItemBase'];
         };
         /**
          * Workout
@@ -1543,26 +1543,26 @@ export interface components {
              */
             step_count: number | null;
             /** @default null */
-            zone_time_minutes: components["schemas"]["ZoneTimeMinutes"] | null;
+            zone_time_minutes: components['schemas']['ZoneTimeMinutes'] | null;
             /** @default null */
-            heart_rate: components["schemas"]["HeartRate"] | null;
+            heart_rate: components['schemas']['HeartRate'] | null;
             /**
              * Active Time Seconds
              * @default null
              */
             active_time_seconds: number | null;
             /** @default null */
-            rower_data: components["schemas"]["Rower"] | null;
+            rower_data: components['schemas']['Rower'] | null;
             /** @default null */
-            treadmill_data: components["schemas"]["Treadmill"] | null;
+            treadmill_data: components['schemas']['Treadmill'] | null;
             /** @default null */
-            class_rating: components["schemas"]["Rating"] | null;
+            class_rating: components['schemas']['Rating'] | null;
             /** @default null */
-            coach_rating: components["schemas"]["Rating"] | null;
-            otf_class: components["schemas"]["BookingV2Class"];
-            studio: components["schemas"]["BookingV2Studio"];
+            coach_rating: components['schemas']['Rating'] | null;
+            otf_class: components['schemas']['BookingV2Class'];
+            studio: components['schemas']['BookingV2Studio'];
             /** @default null */
-            telemetry: components["schemas"]["Telemetry"] | null;
+            telemetry: components['schemas']['Telemetry'] | null;
         };
         /** BodyFatMass */
         BodyFatMass: {
@@ -1674,7 +1674,7 @@ export interface components {
          * BookingStatus
          * @enum {string}
          */
-        BookingStatus: "Pending" | "Requested" | "Booked" | "Cancelled" | "Late Cancelled" | "Waitlisted" | "Checked In" | "Checkin Pending" | "Checkin Requested" | "Confirmed" | "Checkin Cancelled" | "Cancel Checkin Pending" | "Cancel Checkin Requested";
+        BookingStatus: 'Pending' | 'Requested' | 'Booked' | 'Cancelled' | 'Late Cancelled' | 'Waitlisted' | 'Checked In' | 'Checkin Pending' | 'Checkin Requested' | 'Confirmed' | 'Checkin Cancelled' | 'Cancel Checkin Pending' | 'Cancel Checkin Requested';
         /** Coach */
         Coach: {
             /** Coach Uuid */
@@ -1764,7 +1764,7 @@ export interface components {
          * StudioStatus
          * @enum {string}
          */
-        StudioStatus: "OTHER" | "Active" | "Inactive" | "Coming Soon" | "Temporarily Closed" | "Permanently Closed" | "Unknown";
+        StudioStatus: 'OTHER' | 'Active' | 'Inactive' | 'Coming Soon' | 'Temporarily Closed' | 'Permanently Closed' | 'Unknown';
         /** Address */
         Address: {
             /**
@@ -1843,7 +1843,7 @@ export interface components {
              */
             email: string | null;
             /** @default null */
-            address: components["schemas"]["Address"] | null;
+            address: components['schemas']['Address'] | null;
             /**
              * Currency Code
              * @default null
@@ -1878,7 +1878,7 @@ export interface components {
          * ClassType
          * @enum {string}
          */
-        ClassType: "ORANGE_60" | "ORANGE_90" | "OTHER" | "STRENGTH_50" | "TREAD_50";
+        ClassType: 'ORANGE_60' | 'ORANGE_90' | 'OTHER' | 'STRENGTH_50' | 'TREAD_50';
         /** Rating */
         Rating: {
             /** Id */
@@ -1894,14 +1894,14 @@ export interface components {
          */
         Benchmark: {
             /** @default null */
-            equipment_id: components["schemas"]["EquipmentType"] | null;
+            equipment_id: components['schemas']['EquipmentType'] | null;
             /**
              * Equipment Name
              * @default null
              */
             equipment_name: string | null;
             /** Years */
-            years?: components["schemas"]["Year"][];
+            years?: components['schemas']['Year'][];
         };
         /**
          * Challenge
@@ -1924,7 +1924,7 @@ export interface components {
              */
             challenge_name: string | null;
             /** Years */
-            years?: components["schemas"]["Year"][];
+            years?: components['schemas']['Year'][];
         };
         /**
          * EquipmentType
@@ -1953,7 +1953,7 @@ export interface components {
              */
             challenge_name: string | null;
             /** Years */
-            years?: components["schemas"]["Year"][];
+            years?: components['schemas']['Year'][];
         };
         /** Year */
         Year: {
@@ -1981,7 +1981,7 @@ export interface components {
              */
             studio_name: string | null;
             /** @default null */
-            equipment_id: components["schemas"]["EquipmentType"] | null;
+            equipment_id: components['schemas']['EquipmentType'] | null;
             /**
              * Class Time
              * @default null
@@ -2080,7 +2080,7 @@ export interface components {
              */
             is_finished: boolean | null;
             /** Benchmark Histories */
-            benchmark_histories?: components["schemas"]["BenchmarkHistory"][];
+            benchmark_histories?: components['schemas']['BenchmarkHistory'][];
             /**
              * Challenge Id
              * @description Not used by API
@@ -2141,7 +2141,7 @@ export interface components {
              */
             title: string | null;
             /** @default null */
-            equipment_id: components["schemas"]["EquipmentType"] | null;
+            equipment_id: components['schemas']['EquipmentType'] | null;
             /**
              * Entry Type
              * @default null
@@ -2286,27 +2286,27 @@ export interface components {
         };
         /** Rower */
         Rower: {
-            avg_pace: components["schemas"]["PerformanceMetric"];
-            avg_speed: components["schemas"]["PerformanceMetric"];
-            max_pace: components["schemas"]["PerformanceMetric"];
-            max_speed: components["schemas"]["PerformanceMetric"];
-            moving_time: components["schemas"]["PerformanceMetric"];
-            total_distance: components["schemas"]["PerformanceMetric"];
-            avg_cadence: components["schemas"]["PerformanceMetric"];
-            avg_power: components["schemas"]["PerformanceMetric"];
-            max_cadence: components["schemas"]["PerformanceMetric"];
+            avg_pace: components['schemas']['PerformanceMetric'];
+            avg_speed: components['schemas']['PerformanceMetric'];
+            max_pace: components['schemas']['PerformanceMetric'];
+            max_speed: components['schemas']['PerformanceMetric'];
+            moving_time: components['schemas']['PerformanceMetric'];
+            total_distance: components['schemas']['PerformanceMetric'];
+            avg_cadence: components['schemas']['PerformanceMetric'];
+            avg_power: components['schemas']['PerformanceMetric'];
+            max_cadence: components['schemas']['PerformanceMetric'];
         };
         /** Treadmill */
         Treadmill: {
-            avg_pace: components["schemas"]["PerformanceMetric"];
-            avg_speed: components["schemas"]["PerformanceMetric"];
-            max_pace: components["schemas"]["PerformanceMetric"];
-            max_speed: components["schemas"]["PerformanceMetric"];
-            moving_time: components["schemas"]["PerformanceMetric"];
-            total_distance: components["schemas"]["PerformanceMetric"];
-            avg_incline: components["schemas"]["PerformanceMetric"];
-            elevation_gained: components["schemas"]["PerformanceMetric"];
-            max_incline: components["schemas"]["PerformanceMetric"];
+            avg_pace: components['schemas']['PerformanceMetric'];
+            avg_speed: components['schemas']['PerformanceMetric'];
+            max_pace: components['schemas']['PerformanceMetric'];
+            max_speed: components['schemas']['PerformanceMetric'];
+            moving_time: components['schemas']['PerformanceMetric'];
+            total_distance: components['schemas']['PerformanceMetric'];
+            avg_incline: components['schemas']['PerformanceMetric'];
+            elevation_gained: components['schemas']['PerformanceMetric'];
+            max_incline: components['schemas']['PerformanceMetric'];
         };
         /** ZoneTimeMinutes */
         ZoneTimeMinutes: {
@@ -2406,33 +2406,33 @@ export interface components {
         };
         /** TimeStats[AllStatsData] */
         TimeStats_AllStatsData_: {
-            last_year: components["schemas"]["AllStatsData"];
-            this_year: components["schemas"]["AllStatsData"];
-            last_month: components["schemas"]["AllStatsData"];
-            this_month: components["schemas"]["AllStatsData"];
-            last_week: components["schemas"]["AllStatsData"];
-            this_week: components["schemas"]["AllStatsData"];
-            all_time: components["schemas"]["AllStatsData"];
+            last_year: components['schemas']['AllStatsData'];
+            this_year: components['schemas']['AllStatsData'];
+            last_month: components['schemas']['AllStatsData'];
+            this_month: components['schemas']['AllStatsData'];
+            last_week: components['schemas']['AllStatsData'];
+            this_week: components['schemas']['AllStatsData'];
+            all_time: components['schemas']['AllStatsData'];
         };
         /** TimeStats[InStudioStatsData] */
         TimeStats_InStudioStatsData_: {
-            last_year: components["schemas"]["InStudioStatsData"];
-            this_year: components["schemas"]["InStudioStatsData"];
-            last_month: components["schemas"]["InStudioStatsData"];
-            this_month: components["schemas"]["InStudioStatsData"];
-            last_week: components["schemas"]["InStudioStatsData"];
-            this_week: components["schemas"]["InStudioStatsData"];
-            all_time: components["schemas"]["InStudioStatsData"];
+            last_year: components['schemas']['InStudioStatsData'];
+            this_year: components['schemas']['InStudioStatsData'];
+            last_month: components['schemas']['InStudioStatsData'];
+            this_month: components['schemas']['InStudioStatsData'];
+            last_week: components['schemas']['InStudioStatsData'];
+            this_week: components['schemas']['InStudioStatsData'];
+            all_time: components['schemas']['InStudioStatsData'];
         };
         /** TimeStats[OutStudioStatsData] */
         TimeStats_OutStudioStatsData_: {
-            last_year: components["schemas"]["OutStudioStatsData"];
-            this_year: components["schemas"]["OutStudioStatsData"];
-            last_month: components["schemas"]["OutStudioStatsData"];
-            this_month: components["schemas"]["OutStudioStatsData"];
-            last_week: components["schemas"]["OutStudioStatsData"];
-            this_week: components["schemas"]["OutStudioStatsData"];
-            all_time: components["schemas"]["OutStudioStatsData"];
+            last_year: components['schemas']['OutStudioStatsData'];
+            this_year: components['schemas']['OutStudioStatsData'];
+            last_month: components['schemas']['OutStudioStatsData'];
+            this_month: components['schemas']['OutStudioStatsData'];
+            last_week: components['schemas']['OutStudioStatsData'];
+            this_week: components['schemas']['OutStudioStatsData'];
+            all_time: components['schemas']['OutStudioStatsData'];
         };
         /** RowData */
         RowData: {
@@ -2467,9 +2467,9 @@ export interface components {
              */
             timestamp: string | null;
             /** @default null */
-            tread_data: components["schemas"]["TreadData"] | null;
+            tread_data: components['schemas']['TreadData'] | null;
             /** @default null */
-            row_data: components["schemas"]["RowData"] | null;
+            row_data: components['schemas']['RowData'] | null;
         };
         /** TreadData */
         TreadData: {
@@ -2489,11 +2489,11 @@ export interface components {
         };
         /** Zones */
         Zones: {
-            gray: components["schemas"]["Zone"];
-            blue: components["schemas"]["Zone"];
-            green: components["schemas"]["Zone"];
-            orange: components["schemas"]["Zone"];
-            red: components["schemas"]["Zone"];
+            gray: components['schemas']['Zone'];
+            blue: components['schemas']['Zone'];
+            green: components['schemas']['Zone'];
+            orange: components['schemas']['Zone'];
+            red: components['schemas']['Zone'];
         };
         /** OtfItemBase */
         OtfItemBase: Record<string, never>;

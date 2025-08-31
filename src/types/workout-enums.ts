@@ -1,13 +1,13 @@
 // Workout-related enums ported from Python implementation
 
 export enum StatsTime {
-  LastYear = "lastYear",
-  ThisYear = "thisYear", 
-  LastMonth = "lastMonth",
-  ThisMonth = "thisMonth",
-  LastWeek = "lastWeek",
-  ThisWeek = "thisWeek",
-  AllTime = "allTime",
+  LastYear = 'lastYear',
+  ThisYear = 'thisYear', 
+  LastMonth = 'lastMonth',
+  ThisMonth = 'thisMonth',
+  LastWeek = 'lastWeek',
+  ThisWeek = 'thisWeek',
+  AllTime = 'allTime',
 }
 
 export enum EquipmentType {

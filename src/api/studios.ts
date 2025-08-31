@@ -186,7 +186,7 @@ export class StudiosApi {
   async searchStudiosByGeo(
     latitude?: number, 
     longitude?: number, 
-    distance: number = 50
+    distance: number = 50,
   ): Promise<StudioDetail[]> {
     // Use home studio coordinates if not provided
     if (!latitude || !longitude) {
@@ -205,13 +205,14 @@ export class StudiosApi {
   private async getStudiosByGeoPaginated(
     latitude?: number, 
     longitude?: number, 
-    distance: number = 50
+    distance: number = 50,
   ): Promise<any[]> {
     const maxDistance = Math.min(distance, 250); // max distance is 250 miles
     const pageSize = 100;
     let pageIndex = 1;
     const allResults: Record<string, any> = {};
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const response = await this.client.workoutRequest<any>({
         method: 'GET',
@@ -246,7 +247,7 @@ export class StudiosApi {
 
   async getStudiosConcurrent(studioUuids: string[]): Promise<Record<string, StudioDetail>> {
     const promises = studioUuids.map(uuid => 
-      this.getStudioDetail(uuid).then(data => ({ uuid, data }))
+      this.getStudioDetail(uuid).then(data => ({ uuid, data })),
     );
     
     const results = await Promise.all(promises);

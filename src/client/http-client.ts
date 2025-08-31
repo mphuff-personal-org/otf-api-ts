@@ -6,7 +6,7 @@ import {
   AlreadyBookedError,
   BookingAlreadyCancelledError,
   OutsideSchedulingWindowError,
-  ResourceNotFoundError 
+  ResourceNotFoundError, 
 } from '../errors';
 
 export interface RequestOptions {
@@ -49,7 +49,7 @@ export class OtfHttpClient {
   constructor(
     cognito: OtfCognito,
     retryConfig: RetryConfig = { maxRetries: 3, baseDelay: 1000, maxDelay: 10000 },
-    timeout = 20000
+    timeout = 20000,
   ) {
     this.cognito = cognito;
     this.retryConfig = retryConfig;
@@ -102,7 +102,7 @@ export class OtfHttpClient {
 
       const delay = Math.min(
         this.retryConfig.baseDelay * Math.pow(2, attempt),
-        this.retryConfig.maxDelay
+        this.retryConfig.maxDelay,
       );
       
       await this.sleep(delay);

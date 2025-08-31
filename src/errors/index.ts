@@ -10,7 +10,7 @@ export class OtfRequestError extends OtfError {
     message: string,
     cause?: Error,
     public request?: Request,
-    public response?: Response
+    public response?: Response,
   ) {
     super(message, cause);
     this.name = 'OtfRequestError';

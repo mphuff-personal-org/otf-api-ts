@@ -51,7 +51,7 @@ export function formatDateForPythonParity(date: Date, fieldName: string): string
     'open_date',
     're_open_date',
     'end',
-    'start'
+    'start',
   ];
   
   if (localFormatFields.includes(fieldName)) {

@@ -305,7 +305,7 @@ export class WorkoutsApi {
   async getBenchmarks(
     challengeCategoryId: number = 0,
     equipmentId: EquipmentType | 0 = 0,
-    challengeSubcategoryId: number = 0
+    challengeSubcategoryId: number = 0,
   ): Promise<any[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -397,7 +397,7 @@ export class WorkoutsApi {
         rower_data: details.equipment_data?.rower || {},
         treadmill_data: details.equipment_data?.treadmill || {},
         // Telemetry placeholder (will be enhanced when available)
-        telemetry: null
+        telemetry: null,
       };
     } catch (error) {
       console.warn(`getPerformanceSummary failed for ${performanceSummaryId}:`, error instanceof Error ? error.message : String(error));
@@ -494,7 +494,7 @@ export class WorkoutsApi {
       performance_summary_id: response.classHistoryUuid || performanceSummaryId,
       window_size: response.windowSize || response.window_size || null,
       zones: zones,
-      telemetry: telemetryData
+      telemetry: telemetryData,
     };
   }
 
@@ -595,7 +595,7 @@ export class WorkoutsApi {
       this.getPerformanceSummary(id).then(data => ({ id, data })).catch(error => {
         console.warn(`Failed to get performance summary ${id}:`, error instanceof Error ? error.message : String(error));
         return { id, data: null };
-      })
+      }),
     );
     
     const results = await Promise.all(promises);
@@ -614,7 +614,7 @@ export class WorkoutsApi {
       this.getTelemetry(id, maxDataPoints).then(data => ({ id, data })).catch(error => {
         console.warn(`Failed to get telemetry ${id}:`, error instanceof Error ? error.message : String(error));
         return { id, data: null };
-      })
+      }),
     );
     
     const results = await Promise.all(promises);
@@ -643,7 +643,7 @@ export class WorkoutsApi {
   async getWorkouts(
     startDate?: Date | string,
     endDate?: Date | string,
-    maxDataPoints: number = 150
+    maxDataPoints: number = 150,
   ): Promise<WorkoutWithTelemetry[]> {
     try {
       // Set default date range EXACTLY like Python
@@ -701,7 +701,7 @@ export class WorkoutsApi {
       // Include ALL bookings - even those without performance data (tracker system failures)
       const bookingsList = pastBookings.map(booking => ({
         booking,
-        perfSummaryId: booking.workout?.performance_summary_id || null
+        perfSummaryId: booking.workout?.performance_summary_id || null,
       }));
       
       // Extract performance summary IDs for API calls (only non-null ones)
@@ -714,10 +714,10 @@ export class WorkoutsApi {
       // Handle empty case like Python does
       const [performanceSummaries, telemetryData, classUuidMapping] = performanceSummaryIds.length > 0 
         ? await Promise.all([
-            this.getPerformanceSummariesConcurrent(performanceSummaryIds),
-            this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
-            this.getPerformanceSummaryToClassUuidMapping(),
-          ])
+          this.getPerformanceSummariesConcurrent(performanceSummaryIds),
+          this.getTelemetryConcurrent(performanceSummaryIds, maxDataPoints),
+          this.getPerformanceSummaryToClassUuidMapping(),
+        ])
         : [{}, {}, {}];
 
       // Create workout objects for EVERY booking (matches Python exactly)
@@ -733,10 +733,10 @@ export class WorkoutsApi {
 
           // Validate data like Python does - Python throws ValueError for bad booking data
           if (!booking) {
-            throw new Error("v2_booking is required");
+            throw new Error('v2_booking is required');
           }
           if (!booking.otf_class) {
-            throw new Error("otf_class must be an instance of BookingV2Class");  
+            throw new Error('otf_class must be an instance of BookingV2Class');  
           }
 
           // Get class_uuid from mapping exactly like Python
@@ -788,7 +788,7 @@ export class WorkoutsApi {
         startDate,
         endDate,
         true, // excludeCancelled
-        true  // removeDuplicates
+        true,  // removeDuplicates
       );
     } catch (error) {
       console.warn('Failed to get bookings for workouts:', error instanceof Error ? error.message : String(error));
@@ -833,7 +833,7 @@ export class WorkoutsApi {
       
       // Related objects - exclude ends_at to match Python exactly
       otf_class: {
-        ...booking.otf_class
+        ...booking.otf_class,
         // Remove ends_at field that Python doesn't have
       },
       studio: booking.otf_class?.studio,
@@ -881,8 +881,8 @@ export class WorkoutsApi {
 
     // Handle both array and object with telemetry property
     const telemetryArray = Array.isArray(telemetry) ? telemetry : 
-                          (telemetry.telemetry && Array.isArray(telemetry.telemetry)) ? telemetry.telemetry :
-                          null;
+      (telemetry.telemetry && Array.isArray(telemetry.telemetry)) ? telemetry.telemetry :
+        null;
     
     if (!telemetryArray) {
       return telemetry;
@@ -913,7 +913,7 @@ export class WorkoutsApi {
         max_hr: telemetry.maxHr,
         member_uuid: telemetry.memberUuid,
         performance_summary_id: telemetry.classHistoryUuid, // Same as class_history_uuid
-        telemetry: enhancedTelemetryArray
+        telemetry: enhancedTelemetryArray,
       };
     }
     
@@ -934,19 +934,19 @@ export class WorkoutsApi {
     
     // Match Python logic exactly
     switch (classType) {
-      case 'ORANGE_60':
-        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // 60 minutes
-      case 'ORANGE_90':
-        return formatDateToPythonISO(new Date(start.getTime() + (90 * 60 * 1000))); // 90 minutes
-      case 'STRENGTH_50':
-      case 'TREAD_50':
-        return formatDateToPythonISO(new Date(start.getTime() + (50 * 60 * 1000))); // 50 minutes
-      case 'OTHER':
-        console.warn(`Class type ${classType} does not have defined length, returning start time plus 60 minutes`);
-        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
-      default:
-        console.warn(`Class type ${classType} is not recognized, returning start time plus 60 minutes`);
-        return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
+    case 'ORANGE_60':
+      return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // 60 minutes
+    case 'ORANGE_90':
+      return formatDateToPythonISO(new Date(start.getTime() + (90 * 60 * 1000))); // 90 minutes
+    case 'STRENGTH_50':
+    case 'TREAD_50':
+      return formatDateToPythonISO(new Date(start.getTime() + (50 * 60 * 1000))); // 50 minutes
+    case 'OTHER':
+      console.warn(`Class type ${classType} does not have defined length, returning start time plus 60 minutes`);
+      return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
+    default:
+      console.warn(`Class type ${classType} is not recognized, returning start time plus 60 minutes`);
+      return formatDateToPythonISO(new Date(start.getTime() + (60 * 60 * 1000))); // Default 60 minutes
     }
   }
 
@@ -999,7 +999,7 @@ export class WorkoutsApi {
   async rateClassFromWorkout(
     workout: WorkoutWithTelemetry,
     classRating: 0 | 1 | 2 | 3,
-    coachRating: 0 | 1 | 2 | 3
+    coachRating: 0 | 1 | 2 | 3,
   ): Promise<any> {
     if (!workout.ratable || !workout.class_uuid) {
       throw new Error(`Workout ${workout.performance_summary_id} is not rateable`);
@@ -1017,7 +1017,7 @@ export class WorkoutsApi {
       workout.class_uuid,
       workout.performance_summary_id,
       classRating,
-      coachRating
+      coachRating,
     );
     
     return this.getWorkoutFromBooking(workout.booking_id);

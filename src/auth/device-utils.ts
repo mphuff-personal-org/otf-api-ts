@@ -7,7 +7,7 @@ export interface DeviceSecretVerifierConfig {
 
 export function generateHashDevice(
   deviceGroupKey: string,
-  deviceKey: string
+  deviceKey: string,
 ): {
   devicePassword: string;
   deviceSecretVerifierConfig: DeviceSecretVerifierConfig;

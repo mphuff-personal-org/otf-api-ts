@@ -16,7 +16,7 @@ import {
   signSrpSession, 
   wrapInitiateAuth, 
   wrapAuthChallenge,
-  createDeviceVerifier
+  createDeviceVerifier,
 } from 'cognito-srp-helper';
 import { generateHashDevice } from './device-utils';
 import { Cache } from '../cache/types';
@@ -61,7 +61,7 @@ export class OtfCognito {
     username: string,
     password: string | null,
     cache: Cache,
-    config: CognitoConfig
+    config: CognitoConfig,
   ) {
     this.config = config;
     this.username = username;
@@ -111,7 +111,7 @@ export class OtfCognito {
           USERNAME: this.username,
           ...(secretHash && { SECRET_HASH: secretHash }),
         },
-      })
+      }),
     );
 
     const initiateAuthResponse = await this.idpClient.send(initiateAuthCommand);
@@ -131,7 +131,7 @@ export class OtfCognito {
           USERNAME: this.username,
           ...(secretHash && { SECRET_HASH: secretHash }),
         },
-      })
+      }),
     );
 
     const authResponse = await this.idpClient.send(respondToChallengeCommand);
@@ -274,7 +274,7 @@ export class OtfCognito {
         try {
           const { devicePassword } = generateHashDevice(
             this.deviceMetadata.deviceGroupKey,
-            this.deviceMetadata.deviceKey
+            this.deviceMetadata.deviceKey,
           );
           this.deviceMetadata.devicePassword = devicePassword;
         } catch (error) {
@@ -293,7 +293,7 @@ export class OtfCognito {
 
     const { devicePassword, deviceSecretVerifierConfig } = generateHashDevice(
       this.deviceMetadata.deviceGroupKey,
-      this.deviceMetadata.deviceKey
+      this.deviceMetadata.deviceKey,
     );
 
     this.deviceMetadata.devicePassword = devicePassword;

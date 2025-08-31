@@ -28,7 +28,7 @@ export class MembersApi {
       baseUrl: API_ENDPOINTS.main,
       path: `/member/members/${this.memberUuid}`,
       params: { 
-        include: 'memberAddresses,memberClassSummary' 
+        include: 'memberAddresses,memberClassSummary', 
       },
     });
 

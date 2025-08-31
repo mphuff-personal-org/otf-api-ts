@@ -19,20 +19,20 @@ export const DEFAULT_BODY_FAT_MASS_DIVIDERS = [40.0, 60.0, 80.0, 100.0, 160.0, 2
 
 // Enums matching Python implementation
 export enum AverageType {
-  BELOW_AVERAGE = "BELOW_AVERAGE",
-  AVERAGE = "AVERAGE", 
-  ABOVE_AVERAGE = "ABOVE_AVERAGE",
-  MINIMUM = "MINIMUM", // unused
+  BELOW_AVERAGE = 'BELOW_AVERAGE',
+  AVERAGE = 'AVERAGE', 
+  ABOVE_AVERAGE = 'ABOVE_AVERAGE',
+  MINIMUM = 'MINIMUM', // unused
 }
 
 export enum BodyFatPercentIndicator {
-  NO_INDICATOR = "NO_INDICATOR",
-  MINIMUM_BODY_FAT = "MINIMUM_BODY_FAT", // unused
-  LOW_BODY_FAT = "LOW_BODY_FAT", // unused  
-  HEALTHY_BODY_FAT = "HEALTHY_BODY_FAT",
-  GOAL_SETTING_FAT = "GOAL_SETTING_FAT",
-  HIGH_BODY_FAT = "HIGH_BODY_FAT", 
-  OBESE_BODY_FAT = "OBESE_BODY_FAT", // unused
+  NO_INDICATOR = 'NO_INDICATOR',
+  MINIMUM_BODY_FAT = 'MINIMUM_BODY_FAT', // unused
+  LOW_BODY_FAT = 'LOW_BODY_FAT', // unused  
+  HEALTHY_BODY_FAT = 'HEALTHY_BODY_FAT',
+  GOAL_SETTING_FAT = 'GOAL_SETTING_FAT',
+  HIGH_BODY_FAT = 'HIGH_BODY_FAT', 
+  OBESE_BODY_FAT = 'OBESE_BODY_FAT', // unused
 }
 
 /**
@@ -83,14 +83,14 @@ function calculateBodyFatMassControl(data: any): number {
  */
 export function parseDividersString(dividersStr: string): number[] {
   // Handle empty or invalid strings gracefully
-  if (!dividersStr || dividersStr.trim() === "") {
+  if (!dividersStr || dividersStr.trim() === '') {
     return [];
   }
   
   // Split and convert, filtering out empty strings
-  const parts = dividersStr.split(";")
+  const parts = dividersStr.split(';')
     .map(s => s.trim())
-    .filter(s => s !== "");
+    .filter(s => s !== '');
     
   if (parts.length === 0) {
     return [];
@@ -116,7 +116,7 @@ export function parseDividersString(dividersStr: string): number[] {
  */
 export function getPercentBodyFatDescriptor(
   percentBodyFat: number, 
-  bodyFatPercentDividers: number[]
+  bodyFatPercentDividers: number[],
 ): BodyFatPercentIndicator {
   if (!percentBodyFat || !bodyFatPercentDividers[3]) {
     return BodyFatPercentIndicator.NO_INDICATOR;
@@ -397,7 +397,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
 
     this.body_fat_mass_percent_details = {
@@ -405,7 +405,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
 
     this.extra_cellular_water_details = {
@@ -413,7 +413,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
 
     this.extra_cellular_water_over_total_body_water_details = {
@@ -421,7 +421,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
 
     this.intra_cellular_water_details = {
@@ -429,7 +429,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
 
     this.total_body_weight_details = {
@@ -437,7 +437,7 @@ export class BodyCompositionData {
       left_leg: 0,
       right_arm: 0,
       right_leg: 0,
-      trunk: 0
+      trunk: 0,
     };
   }
   
@@ -478,7 +478,7 @@ export class BodyCompositionData {
   get bodyFatPercentRelativeDescriptor(): BodyFatPercentIndicator {
     return getPercentBodyFatDescriptor(
       this.percent_body_fat, 
-      getBodyFatPercentDividers(this.age, this.gender)
+      getBodyFatPercentDividers(this.age, this.gender),
     );
   }
 }

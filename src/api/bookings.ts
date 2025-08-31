@@ -157,7 +157,7 @@ export class BookingsApi {
     startDate: Date,
     endDate: Date,
     excludeCancelled: boolean = true,
-    removeDuplicates: boolean = true
+    removeDuplicates: boolean = true,
   ): Promise<BookingV2[]> {
     const response = await this.client.workoutRequest<any>({
       method: 'GET',
@@ -337,7 +337,7 @@ export class BookingsApi {
     classUuid: string,
     performanceSummaryId: string,
     classRating: 0 | 1 | 2 | 3,
-    coachRating: 0 | 1 | 2 | 3
+    coachRating: 0 | 1 | 2 | 3,
   ): Promise<void> {
     await this.client.workoutRequest({
       method: 'POST',
