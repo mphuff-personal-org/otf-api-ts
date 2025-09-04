@@ -26,14 +26,14 @@ else
     echo -e "${YELLOW}⚠️  No .env file found, using environment variables${NC}"
 fi
 
-# Configuration - read target version from file
-if [ -f "TARGET_PYTHON_OTFAPI_LIBRARY_VERSION" ]; then
-    PYTHON_VERSION=$(cat "TARGET_PYTHON_OTFAPI_LIBRARY_VERSION" | tr -d '\n\r')
+# Configuration - read target version from otf-python.config.json
+if [ -f "otf-python.config.json" ]; then
+    PYTHON_VERSION=$(node -pe "JSON.parse(require('fs').readFileSync('otf-python.config.json', 'utf8')).version")
 else
     PYTHON_VERSION="${PYTHON_VERSION:-0.15.4}"
 fi
 echo -e "${BLUE}Configuration:${NC}"
-echo "   Python OTF API version: $PYTHON_VERSION (from TARGET_PYTHON_OTFAPI_LIBRARY_VERSION)"
+echo "   Python OTF API version: $PYTHON_VERSION (from otf-python.config.json)"
 
 # Check for required environment variables
 if [ -z "$OTF_EMAIL" ]; then

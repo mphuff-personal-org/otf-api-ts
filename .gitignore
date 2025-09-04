@@ -8,6 +8,9 @@ docs/
 .DS_Store
 schema/
 
+# Local config override
+otf-python.config.local.json
+
 # Do not write out integration test results to git
 integration_test/**.json
 integration_test/*/**.json

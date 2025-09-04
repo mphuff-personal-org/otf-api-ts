@@ -1,0 +1,16 @@
+{
+  "repository": {
+    "owner": "NodeJSmith",
+    "name": "otf-api",
+    "url": "https://github.com/NodeJSmith/otf-api"
+  },
+  "version": "0.15.4",
+  "schema": {
+    "asset": "openapi.yaml",
+    "localPath": "schema/openapi.yaml"
+  },
+  "localOverride": {
+    "enabled": false,
+    "path": "../otf-api"
+  }
+}

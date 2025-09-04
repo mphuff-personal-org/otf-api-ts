@@ -1,0 +1,94 @@
+name: Release to NPM
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags like v0.154.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (without v prefix, e.g., 0.154.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write  # Required for OIDC authentication
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Extract version from tag (remove 'v' prefix)
+            VERSION=${GITHUB_REF_NAME#v}
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Publishing version: ${VERSION}"
+      
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add package.json package-lock.json
+          git diff --staged --quiet || git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate types from schema
+        run: npm run generate-types
+      
+      - name: Run tests
+        run: npm test
+        env:
+          OTF_EMAIL: ${{ secrets.OTF_EMAIL }}
+          OTF_PASSWORD: ${{ secrets.OTF_PASSWORD }}
+      
+      - name: Build package
+        run: npm run build
+      
+      # Using NPM Trusted Publishers (OIDC) - no NPM_TOKEN needed!
+      - name: Publish to NPM
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}  # Optional fallback if OIDC not configured
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## 🎉 Release v${{ steps.version.outputs.version }}
+            
+            ### 📦 Installation
+            ```bash
+            npm install otf-api-ts@${{ steps.version.outputs.version }}
+            ```
+            
+            ### 🔗 Links
+            - [NPM Package](https://www.npmjs.com/package/otf-api-ts/v/${{ steps.version.outputs.version }})
+            - [Python otf-api](https://github.com/NodeJSmith/otf-api)
+            
+            ---
+            *This release tracks Python otf-api version from `otf-python.config.json`*
+          draft: false
+          prerelease: false

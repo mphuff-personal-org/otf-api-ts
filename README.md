@@ -3,49 +3,32 @@
 [![npm version](https://badge.fury.io/js/otf-api-ts.svg)](https://badge.fury.io/js/otf-api-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js 18+](https://img.shields.io/badge/node-18.0+-green.svg)](https://nodejs.org/)
-[![Code Coverage](https://codecov.io/gh/mphuff-personal-org/otf-api-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/your-username/otf-api-ts)
+[![Code Coverage](https://codecov.io/gh/mphuff-personal-org/otf-api-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/mphuff-personal-org/otf-api-ts)
 
-A TypeScript/JavaScript API client for OrangeTheory Fitness APIs. This library provides type-safe access to OTF APIs for retrieving workouts, performance data, class schedules, studio information, and bookings.
+Type-safe TypeScript/JavaScript client for OrangeTheory Fitness APIs with full coverage of workouts, bookings, studios, and member data.
 
-**⚠️ Important**: This software is not affiliated with, endorsed by, or supported by Orangetheory Fitness. It may break if OrangeTheory changes their services.
+**⚠️ Disclaimer**: Not affiliated with Orangetheory Fitness. May break if their API changes.
 
-## Features
+## Important: Python Library Relationship
 
-- **Full Type Safety**: Generated TypeScript types from Python models
-- **Comprehensive API Coverage**: Access workouts, bookings, member details, studio information
-- **Authentication**: AWS Cognito integration with automatic token management
-- **Multiple Cache Options**: Memory, localStorage, and file system caching
-- **Browser & Node.js**: Works in both environments
-- **Clean Architecture**: Consistent with Python library design
+This TypeScript library follows the [Python otf-api](https://github.com/NodeJSmith/otf-api) library:
+- **Version Alignment**: The version number matches the Python library base version (see `otf-python.config.json`)
+- **Source of Truth**: The Python library is the canonical source - all API changes should originate there
+- **Porting Direction**: Changes flow from Python → TypeScript, never the reverse (except TypeScript-specific fixes)
+- **Type Generation**: All types are auto-generated from Python Pydantic models
 
 ## Installation
-
-### Using npm
 
 ```bash
 npm install otf-api-ts
 ```
 
-### Using yarn
-
-```bash
-yarn add otf-api-ts
-```
-
-### Using pnpm
-
-```bash
-pnpm add otf-api-ts
-```
-
 ## Quick Start
-
-### Basic Usage (Node.js)
 
 ```typescript
 import { Otf } from 'otf-api-ts';
 
-// Initialize with credentials
+// Initialize with credentials or use env vars (OTF_EMAIL, OTF_PASSWORD)
 const otf = new Otf({
   email: 'your-email@example.com',
   password: 'your-password'
@@ -55,358 +38,181 @@ const otf = new Otf({
 const member = await otf.members.getMemberDetail();
 console.log(`Hello, ${member.first_name}!`);
 
-// Get recent workouts
+// Get workouts
 const workouts = await otf.workouts.getWorkouts({
   startDate: new Date('2024-01-01'),
   endDate: new Date('2024-01-31')
 });
 ```
 
-### Basic Usage (Browser)
-
-```typescript
-import { Otf, LocalStorageCache } from 'otf-api-ts';
-
-const otf = new Otf({
-  email: 'your-email@example.com',
-  password: 'your-password',
-  cache: new LocalStorageCache() // Use browser localStorage
-});
-
-// Same API as Node.js version
-const member = await otf.members.getMemberDetail();
-```
-
-### Environment Variables (Node.js)
-
-```typescript
-// Set in your environment
-// OTF_EMAIL=your-email@example.com
-// OTF_PASSWORD=your-password
-
-import { Otf } from 'otf-api-ts';
-
-// Automatically uses process.env.OTF_EMAIL and process.env.OTF_PASSWORD
-const otf = new Otf();
-```
-
-### Advanced Configuration
-
-```typescript
-import { Otf, FileCacheOptions, MemoryCache } from 'otf-api-ts';
-
-const otf = new Otf({
-  email: 'your-email@example.com',
-  password: 'your-password',
-  
-  // Cache options
-  cache: new MemoryCache({ maxSize: 1000 }),
-  
-  // Request timeout
-  timeout: 30000,
-  
-  // Custom user agent
-  userAgent: 'MyApp/1.0.0',
-  
-  // Debug mode
-  debug: true
-});
-```
-
-## API Overview
-
-The library is organized into 4 main API domains:
-
-### Bookings API
-
-```typescript
-// Get upcoming bookings
-const bookings = await otf.bookings.getBookingsNew(
-  new Date('2024-01-01'),
-  new Date('2024-01-31')
-);
-
-// Get single booking
-const booking = await otf.bookings.getBookingNew('booking-id');
-
-// Book a class (if booking endpoints are available)
-// const booking = await otf.bookings.bookClass('class-uuid');
-```
+## API Modules
 
 ### Members API
-
 ```typescript
-// Get member profile
 const member = await otf.members.getMemberDetail();
-console.log(`Member: ${member.first_name} ${member.last_name}`);
-console.log(`Home Studio: ${member.home_studio.name}`);
-
-// Access nested data with full type safety
-if (member.profile) {
-  console.log(`Max HR: ${member.profile.formula_max_hr}`);
-}
-```
-
-### Studios API
-
-```typescript
-// Get studio details
-const studio = await otf.studios.getStudioDetail('studio-uuid');
-console.log(`Studio: ${studio.name}`);
-console.log(`Location: ${studio.location.address}`);
-
-// Get studio services
-const services = await otf.studios.getStudioServices('studio-uuid');
 ```
 
 ### Workouts API
+```typescript
+const performance = await otf.workouts.getPerformanceSummary('summary-id');
+const telemetry = await otf.workouts.getTelemetry('summary-id');
+const challenges = await otf.workouts.getChallengeTracker();
+```
+
+### Bookings API
+```typescript
+const bookings = await otf.bookings.getBookingsNew(startDate, endDate);
+const booking = await otf.bookings.getBookingNew('booking-id');
+```
+
+### Studios API
+```typescript
+const studio = await otf.studios.getStudioDetail('studio-uuid');
+const services = await otf.studios.getStudioServices('studio-uuid');
+```
+
+## Configuration
 
 ```typescript
-// Get performance summary
-const performance = await otf.workouts.getPerformanceSummary('summary-id');
-console.log(`Calories: ${performance.calories_burned}`);
-console.log(`Splat Points: ${performance.splat_points}`);
-
-// Get telemetry data
-const telemetry = await otf.workouts.getTelemetry('summary-id', {
-  maxDataPoints: 1000
+const otf = new Otf({
+  email: 'your-email@example.com',
+  password: 'your-password',
+  
+  // Optional settings
+  cache: new MemoryCache({ maxSize: 1000 }),  // or LocalStorageCache, FileCache
+  timeout: 30000,                              // Request timeout in ms
+  debug: true                                  // Enable debug logging
 });
+```
 
-// Get challenge tracker
-const challenges = await otf.workouts.getChallengeTracker();
+## Caching
+
+Three cache implementations available:
+- **MemoryCache** (default): In-memory caching
+- **LocalStorageCache**: Browser localStorage
+- **FileCache**: Node.js file system
+
+```typescript
+// Browser
+import { LocalStorageCache } from 'otf-api-ts';
+const otf = new Otf({ cache: new LocalStorageCache() });
+
+// Node.js persistent cache
+import { FileCache } from 'otf-api-ts';
+const otf = new Otf({ cache: new FileCache({ cacheDir: './cache' }) });
 ```
 
 ## Type Safety
 
-All API responses are fully typed based on the Python Pydantic models:
+Full TypeScript support with generated types from Python Pydantic models:
 
 ```typescript
 import type { MemberDetail, BookingV2, Workout } from 'otf-api-ts';
 
-// Full IntelliSense support
 const member: MemberDetail = await otf.members.getMemberDetail();
-const homeStudio = member.home_studio; // Type: StudioDetail
-const studioName = homeStudio.name;    // Type: string
-const location = homeStudio.location;   // Type: StudioLocation
-
-// Nullable fields are properly typed
-const weight = member.weight;           // Type: number | null
+const homeStudio = member.home_studio;  // Fully typed nested objects
+const weight = member.weight;           // Properly typed as number | null
 ```
 
-## Authentication
+## Development
 
-### AWS Cognito Integration
+### Versioning Strategy
 
-```typescript
-// Manual authentication
-const auth = await otf.authenticate();
-console.log(`Authenticated as: ${auth.email}`);
+This library uses a compressed versioning scheme to track the Python otf-api library while maintaining npm semver compatibility:
 
-// Access tokens directly (for advanced usage)
-const tokens = otf.getTokens();
-if (tokens) {
-  console.log(`Access Token: ${tokens.accessToken}`);
-  console.log(`ID Token: ${tokens.idToken}`);
-}
+**Version Format: `0.[PYTHON_MINOR][PYTHON_PATCH].[TS_PATCH]`**
 
-// Check authentication status
-if (await otf.isAuthenticated()) {
-  console.log('Ready to make API calls');
-}
-```
+Examples:
+- Python `0.15.4` → TypeScript `0.154.0`, `0.154.1`, `0.154.2`...
+- Python `0.15.10` → TypeScript `0.1510.0`, `0.1510.1`...
+- Python `0.16.0` → TypeScript `0.160.0`, `0.160.1`...
 
-### Token Caching
+**Key Points:**
+- Python version tracked in `otf-python.config.json`
+- Middle digit combines Python minor+patch (15+4 = 154)
+- Last digit for TypeScript-specific patches
+- To update Python version: `npm run python-version:set <version>`
+- For local development, copy `otf-python.config.local.example.json` to `otf-python.config.local.json`
 
-```typescript
-import { Otf, FileCacheOptions } from 'otf-api-ts';
+### Requirements
+- Node.js 18+
+- npm/yarn/pnpm
 
-// Tokens are automatically cached and reused
-const otf = new Otf({
-  email: 'your-email@example.com',
-  password: 'your-password',
-  cache: new FileCacheOptions({
-    cacheDir: './cache',
-    ttl: 3600000 // 1 hour in milliseconds
-  })
-});
-```
-
-## Caching Options
-
-### Memory Cache (Default)
-```typescript
-import { MemoryCache } from 'otf-api-ts';
-
-const otf = new Otf({
-  cache: new MemoryCache({
-    maxSize: 1000,      // Maximum number of items
-    ttl: 300000        // 5 minutes TTL
-  })
-});
-```
-
-### Local Storage Cache (Browser)
-```typescript
-import { LocalStorageCache } from 'otf-api-ts';
-
-const otf = new Otf({
-  cache: new LocalStorageCache({
-    keyPrefix: 'otf-api-',
-    ttl: 300000
-  })
-});
-```
-
-### File System Cache (Node.js)
-```typescript
-import { FileCache } from 'otf-api-ts';
-
-const otf = new Otf({
-  cache: new FileCache({
-    cacheDir: './cache',
-    ttl: 300000
-  })
-});
-```
-
-## Development Setup
-
-### Prerequisites
-
-- Node.js 18 or higher
-- npm, yarn, or pnpm
-
-### Setting Up Development Environment
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/NodeJSmith/otf-api.git
-   cd otf-api/typescript
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Generate types from schema**
-   ```bash
-   npm run generate-types
-   ```
-
-4. **Run tests**
-   ```bash
-   npm test
-   ```
-
-5. **Build the library**
-   ```bash
-   npm run build
-   ```
-
-### Development Commands
-
-#### Building
+### Setup
 ```bash
-# Build TypeScript to JavaScript
-npm run build
-
-# Build in watch mode
-npm run build:watch
-
-# Clean build artifacts
-npm run clean
+git clone https://github.com/your-username/otf-api-ts.git
+cd otf-api-ts
+npm install
 ```
 
-#### Testing
+### Available Scripts
 ```bash
-# Run all tests
-npm test
+# Core commands
+npm run build              # Build TypeScript
+npm run test              # Run tests
+npm run test:coverage     # Run tests with coverage
+npm run lint              # Lint code
+npm run type-check        # Type check without building
 
-# Run tests in watch mode
-npm run test:watch
+# Development
+npm run dev               # Build in watch mode
+npm run test:watch        # Test in watch mode
 
-# Run specific test file
-npm test -- members.test.ts
+# Schema & Types
+npm run generate-types    # Generate types from OpenAPI schema
+npm run validate-schema   # Validate OpenAPI schema
 
-# Run with coverage
-npm run test:coverage
+# Integration Testing
+npm run integration-test  # Run cross-language integration tests
 ```
 
-#### Code Quality
+### Project Structure
+```
+src/
+├── api/              # API client modules (bookings, members, studios, workouts)
+├── auth/             # AWS Cognito authentication
+├── cache/            # Cache implementations  
+├── client/           # HTTP client
+├── generated/        # Auto-generated types from Python models
+└── types/            # Custom TypeScript types
+
+test/                 # Test suite
+examples/            # Usage examples
+scripts/             # Build and utility scripts
+```
+
+## Architecture Notes
+
+- **Type Generation**: Types are auto-generated from Python Pydantic models to maintain consistency
+- **Field Mapping**: Library handles OrangeTheory's inconsistent API field names internally
+- **Authentication**: AWS Cognito with automatic token refresh
+
+## Cross-Platform Integration Testing
+
+The library includes comprehensive cross-language validation to ensure data consistency:
+
 ```bash
-# Lint with ESLint
-npm run lint
+# Run full cross-language integration tests
+npm run integration-test
 
-# Fix linting issues
-npm run lint:fix
+# Run Python integration tests
+npm run integration-test:python
 
-# Type check
-npm run type-check
+# Run TypeScript integration tests  
+npm run integration-test:typescript
+
+# Validate data consistency between Python and TypeScript
+npm run integration-test:validate
 ```
 
-#### Type Generation
-```bash
-# Generate TypeScript types from OpenAPI schema
-npm run generate-types
+**What's Tested:**
+- API response parsing matches between Python and TypeScript
+- Data transformation produces identical results
+- Field mapping consistency
+- Authentication flow parity
+- Cache behavior alignment
 
-# Validate generated types
-npm run test:types
-```
-
-## Project Structure
-
-```
-typescript/
-├── src/
-│   ├── api/              # API client modules
-│   │   ├── bookings.ts   # Booking operations
-│   │   ├── members.ts    # Member operations
-│   │   ├── studios.ts    # Studio operations
-│   │   └── workouts.ts   # Workout operations
-│   ├── auth/             # Authentication
-│   │   ├── cognito.ts    # AWS Cognito client
-│   │   └── token-auth.ts # Token management
-│   ├── cache/            # Caching implementations
-│   │   ├── memory-cache.ts
-│   │   ├── local-storage-cache.ts
-│   │   └── file-cache.ts
-│   ├── client/           # HTTP client
-│   ├── generated/        # Auto-generated types
-│   │   └── types.ts      # Generated from Python models
-│   ├── types/            # Custom TypeScript types
-│   └── index.ts          # Main export
-├── test/                 # Test suite
-├── examples/             # Usage examples
-└── package.json          # Package configuration
-```
-
-## Architecture
-
-### Design Philosophy
-The TypeScript library mirrors the Python library's architecture:
-- Same clean field names (source of truth from Python models)
-- Consistent API structure and method names
-- Type-safe interfaces generated from Python Pydantic models
-
-### Data Transformation
-```
-OrangeTheory API → TypeScript Client → Transform → Clean Python Field Names → Consumer
-```
-
-The library handles the messy OrangeTheory API field mapping internally:
-```typescript
-// Internal transformation (you don't see this)
-{
-  memberUUId: "123",      // OrangeTheory API
-  firstName: "John"       // OrangeTheory API
-}
-↓
-{
-  member_uuid: "123",     // Clean Python field name
-  first_name: "John"      // Clean Python field name
-}
-```
+The integration tests fetch real data using both libraries and validate that the outputs are identical, ensuring complete compatibility.
 
 ## Error Handling
 
@@ -417,141 +223,56 @@ try {
   const member = await otf.members.getMemberDetail();
 } catch (error) {
   if (error instanceof AuthenticationError) {
-    console.error('Authentication failed:', error.message);
+    // Handle auth failure
   } else if (error instanceof RateLimitError) {
-    console.error('Rate limited:', error.retryAfter);
-  } else if (error instanceof OtfError) {
-    console.error('API error:', error.message);
-  } else {
-    console.error('Unexpected error:', error);
+    // Handle rate limiting  
   }
 }
 ```
 
-## Examples
-
-### Basic Workout Analytics
-```typescript
-const workouts = await otf.workouts.getWorkouts({
-  startDate: new Date('2024-01-01'),
-  endDate: new Date('2024-12-31')
-});
-
-const totalCalories = workouts.reduce((sum, w) => sum + (w.calories_burned || 0), 0);
-const avgSplatPoints = workouts.reduce((sum, w) => sum + (w.splat_points || 0), 0) / workouts.length;
-
-console.log(`Total Calories: ${totalCalories}`);
-console.log(`Average Splat Points: ${avgSplatPoints.toFixed(1)}`);
-```
-
-### Studio Finder
-```typescript
-const studios = await otf.studios.getStudios();
-const nearbyStudios = studios
-  .filter(s => s.distance < 10) // Within 10 miles
-  .sort((a, b) => a.distance - b.distance);
-
-console.log('Nearby Studios:');
-nearbyStudios.forEach(studio => {
-  console.log(`${studio.name} - ${studio.distance} miles`);
-});
-```
-
-## Code Coverage
-
-This project maintains comprehensive test coverage to ensure reliability and code quality.
-
-### Coverage Reports
-- **Current Coverage**: [![Code Coverage](https://codecov.io/gh/your-username/otf-api-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/your-username/otf-api-ts)
-- **Detailed Reports**: [Codecov Dashboard](https://codecov.io/gh/your-username/otf-api-ts)
-- **Coverage Threshold**: 80% minimum coverage required
-
-### Running Coverage Locally
-```bash
-# Run tests with coverage
-npm run test:coverage
-
-# View coverage report
-open coverage/lcov-report/index.html
-```
-
-### Coverage Areas
-- ✅ API client methods
-- ✅ Authentication flows
-- ✅ Data transformation logic
-- ✅ Error handling
-- ✅ Cache implementations
-- ✅ Utility functions
-
-## Contributing
-
-### Code Standards
-- Use TypeScript for all code
-- Follow ESLint configuration
-- Include comprehensive JSDoc comments
-- Maintain 100% type coverage
-
-### Adding New Features
-1. Update the corresponding API class
-2. Add proper TypeScript types
-3. Include comprehensive tests
-4. Update documentation
-5. Ensure examples work
-
-### Type Generation
-The types are auto-generated from the Python Pydantic models. To add new types:
-
-1. Add the model to Python library
-2. Regenerate schema: `cd ../python && uv run python ../scripts/generate_openapi.py`
-3. Regenerate types: `npm run generate-types`
-
 ## Troubleshooting
 
-### Authentication Issues
+**Authentication Issues**
 ```typescript
-// Enable debug mode
-const otf = new Otf({
-  email: 'your-email',
-  password: 'your-password',
-  debug: true
-});
-
-// Check authentication
-if (!(await otf.isAuthenticated())) {
-  console.error('Authentication failed');
-}
+const otf = new Otf({ debug: true });  // Enable debug logging
 ```
 
-### CORS Issues (Browser)
+**CORS Issues (Browser)**
 ```typescript
 // Use a CORS proxy for development
 const otf = new Otf({
-  email: 'your-email',
-  password: 'your-password',
-  baseUrl: 'https://cors-anywhere.herokuapp.com/https://api.orangetheory.co'
+  baseUrl: 'https://cors-proxy.example.com/https://api.orangetheory.co'
 });
 ```
 
-### Rate Limiting
+**Rate Limiting**
 ```typescript
 // Add delays between requests
-for (const workoutId of workoutIds) {
-  const workout = await otf.workouts.getWorkout(workoutId);
-  await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-}
+await new Promise(resolve => setTimeout(resolve, 500));
 ```
 
-## API Reference
+## Contributing
 
-For complete API documentation, see:
-- **Type Definitions**: `src/generated/types.ts`
-- **Examples**: `examples/` directory
-- **Tests**: `test/` directory for usage examples
+**Important: Python-First Development**
+- All API changes MUST originate in the [Python otf-api](https://github.com/NodeJSmith/otf-api) library
+- Do NOT port TypeScript changes back to Python (except TypeScript-specific fixes)
+- The Python library is the canonical source of truth
+
+**Development Workflow:**
+1. Make changes in Python otf-api first
+2. Update version in `otf-python.config.json` (or use `npm run python-version:set`)
+3. Run `npm run generate-types` to sync TypeScript types
+4. Run `npm run integration-test:validate` to ensure consistency
+5. Add TypeScript-specific tests if needed
+6. Ensure `npm run lint` and `npm run type-check` pass
+7. Maintain 80%+ test coverage
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT
 
-## Disclaimer
+## Links
 
-This project is not affiliated with, endorsed by, or supported by Orangetheory Fitness. Use at your own risk.
+- [NPM Package](https://www.npmjs.com/package/otf-api-ts)
+- [GitHub Repository](https://github.com/your-username/otf-api-ts)
+- [Coverage Reports](https://codecov.io/gh/mphuff-personal-org/otf-api-ts)
